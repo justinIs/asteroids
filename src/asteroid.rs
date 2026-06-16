@@ -69,6 +69,10 @@ impl Asteroid {
         verticies
     }
 
+    pub fn bounds(&self) -> (Vec2, f32) {
+        (self.position, self.size.radius())
+    }
+
     pub fn gen_position(avoid_pos: Vec2, min_clearance: f32, other_asteroids: &[Asteroid]) -> Vec2 {
         loop {
             let candidate = vec2(
@@ -77,7 +81,9 @@ impl Asteroid {
             );
             let mut overlaps_other = false;
             for other in other_asteroids {
-                if candidate.distance(other.position) < other.size.radius() {
+                if candidate.distance(other.position)
+                    < (other.size.radius() + AsteroidSize::Large.radius())
+                {
                     overlaps_other = true;
                     break;
                 }

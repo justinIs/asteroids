@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
 
+use crate::vec_util;
+
 const ROTATION_SPEED: f32 = std::f32::consts::PI;
 const THRUST: f32 = 200.0;
 const MAX_VELOCITY: f32 = 400.0;
@@ -17,6 +19,10 @@ impl Ship {
             velocity: Vec2::ZERO,
             rotation: 0.0,
         }
+    }
+
+    pub fn bounds(&self) -> (Vec2, f32) {
+        (self.position, 18.0)
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -58,17 +64,12 @@ impl Ship {
         let right_rear = vec2(12.0, 12.0);
         let back = vec2(0.0, 5.0);
 
-        let [n, l, r, b] =
-            [nose, left_rear, right_rear, back].map(|p| self.rotate(p) + self.position);
+        let [n, l, r, b] = [nose, left_rear, right_rear, back]
+            .map(|p| vec_util::rotate(self.rotation, p) + self.position);
 
         draw_line(l.x, l.y, n.x, n.y, 1.5, WHITE);
         draw_line(n.x, n.y, r.x, r.y, 1.5, WHITE);
         draw_line(r.x, r.y, b.x, b.y, 1.5, WHITE);
         draw_line(b.x, b.y, l.x, l.y, 1.5, WHITE);
-    }
-
-    fn rotate(&self, p: Vec2) -> Vec2 {
-        let (sin, cos) = self.rotation.sin_cos();
-        vec2(p.x * cos - p.y * sin, p.x * sin + p.y * cos)
     }
 }
