@@ -11,15 +11,16 @@ pub struct Ship {
 }
 
 impl Ship {
-    pub fn new() -> Ship {
+    pub fn new(position: Vec2) -> Ship {
         Ship {
-            position: vec2(screen_width() / 2.0, screen_height() / 2.0),
+            position,
             velocity: Vec2::ZERO,
             rotation: 0.0,
         }
     }
 
     pub fn update(&mut self, dt: f32) {
+        // Handle rotation
         let right = is_key_down(KeyCode::Right) || is_key_down(KeyCode::D);
         let left = is_key_down(KeyCode::Left) || is_key_down(KeyCode::A);
         if right && !left {
@@ -29,12 +30,15 @@ impl Ship {
         }
         self.rotation = self.rotation.rem_euclid(std::f32::consts::TAU);
 
+        // Handle thrust
         let up = is_key_down(KeyCode::Up) || is_key_down(KeyCode::W);
         if up {
             let direction = vec2(self.rotation.sin(), -self.rotation.cos());
             self.velocity += direction * THRUST * dt;
             self.velocity = self.velocity.clamp_length_max(MAX_VELOCITY);
         }
+
+        // Update position based on velocity
         self.position += self.velocity * dt;
         if self.position.x > screen_width() {
             self.position.x = 0.0;
