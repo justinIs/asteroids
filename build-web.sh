@@ -5,7 +5,7 @@
 #   ./build-web.sh            # debug build (faster compile, larger wasm)
 #   ./build-web.sh --release  # optimized build (slower compile, smaller wasm)
 #
-# After building, serve dist/ over HTTP (browsers won't load .wasm from file://):
+# After building, serve dist/ over HTTP
 #   npx serve dist
 
 set -euo pipefail
@@ -17,17 +17,17 @@ CARGO_FLAGS=()
 
 # Parse a single optional --release / -r flag.
 case "${1:-}" in
-    --release|-r)
-        CARGO_FLAGS+=(--release)
-        PROFILE_DIR="release"
-        ;;
-    "")
-        ;;
-    *)
-        echo "unknown argument: $1" >&2
-        echo "usage: $0 [--release|-r]" >&2
-        exit 1
-        ;;
+--release | -r)
+    CARGO_FLAGS+=(--release)
+    PROFILE_DIR="release"
+    ;;
+"")
+    ;;
+*)
+    echo "unknown argument: $1" >&2
+    echo "usage: $0 [--release|-r]" >&2
+    exit 1
+    ;;
 esac
 
 echo "==> Building $CRATE for $TARGET ($PROFILE_DIR)"
