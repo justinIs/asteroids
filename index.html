@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>Asteroids</title>
+    <style>
+        html, body, canvas {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: absolute;
+            background: black;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- macroquad finds the canvas by this exact id; tabindex lets it receive keyboard input -->
+    <canvas id="glcanvas" tabindex="1"></canvas>
+    <!-- macroquad's JS shim — provides the global load() function (no wasm-bindgen needed) -->
+    <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>
+    <script>
+        load("asteroids.wasm");
+    </script>
+</body>
+</html>

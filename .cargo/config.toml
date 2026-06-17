@@ -1,0 +1,5 @@
+# macroquad/miniquad call JS functions (glFlush, init_webgl, run_animation_loop, ...)
+# that are provided at runtime by mq_js_bundle.js. They must be left as wasm imports
+# rather than resolved at link time, so allow undefined symbols for the wasm target.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=--allow-undefined"]
