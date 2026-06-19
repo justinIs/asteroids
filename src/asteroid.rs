@@ -7,6 +7,9 @@ const MAX_ASTERIOD_EDGES: u8 = 9;
 const MIN_ASTEROID_EDGES: u8 = 5;
 const INITIAL_ASTEROID_SPEED: f32 = 50.0;
 
+// Spin gain coefficient
+const K: f32 = 1.5;
+
 #[derive(Debug, Copy, Clone)]
 pub enum AsteroidSize {
     Small,
@@ -89,13 +92,17 @@ impl Asteroid {
         self.size
     }
 
-    pub fn position(&self) -> Vec2 {
-        self.position
-    }
-
     pub fn set_position(&mut self, position: Vec2) {
         self.position = position;
         self.wrap_position();
+    }
+
+    pub fn spin(&self) -> f32 {
+        self.spin
+    }
+
+    pub fn set_spin(&mut self, spin: f32) {
+        self.spin = spin.clamp(-PI, PI);
     }
 
     pub fn gen_position(avoid_pos: Vec2, min_clearance: f32, other_asteroids: &[Asteroid]) -> Vec2 {
@@ -170,5 +177,56 @@ impl Asteroid {
         self.position.x = self.position.x.rem_euclid(screen_width());
 
         self.position.y = self.position.y.rem_euclid(screen_height());
+    }
+
+    pub fn find_collisions(asteroids: &[Asteroid]) -> Vec<(usize, usize)> {
+        let mut collisions: Vec<(usize, usize)> = Vec::new();
+        for i in 0..asteroids.len() {
+            let (a_i_pos, a_i_rad) = asteroids[i].bounds();
+            for j in i + 1..asteroids.len() {
+                let (a_j_pos, a_j_rad) = asteroids[j].bounds();
+
+                if vec_util::circles_overlap_wrapped(a_i_pos, a_i_rad, a_j_pos, a_j_rad) {
+                    collisions.push((i, j));
+                }
+            }
+        }
+        collisions
+    }
+
+    pub fn collide_with(&mut self, other: &mut Asteroid) {
+        let (self_pos, self_rad) = self.bounds();
+        let (other_pos, other_rad) = other.bounds();
+
+        let delta = vec_util::wrapped_delta(self_pos, other_pos);
+        let dist = delta.length();
+        let n = if dist < f32::EPSILON {
+            vec2(1.0, 0.0)
+        } else {
+            delta / dist
+        };
+
+        let rel = self.velocity() - other.velocity();
+
+        let along = rel.dot(n);
+        if along > 0.0 {
+            self.set_velocity(self.velocity() - (along * n));
+            other.set_velocity(other.velocity() + (along * n));
+
+            // Update spin for each asteroid
+            let tangent = vec2(-n.y, n.x);
+            let vt = rel.dot(tangent); // tangential relative speed
+
+            let spin_delta = K * vt / self.size().radius();
+            self.set_spin(self.spin() + spin_delta);
+
+            let spin_delta = K * vt / other.size().radius();
+            other.set_spin(other.spin() + spin_delta);
+        }
+
+        let overlap = (self_rad + other_rad) - dist;
+        let separation = n * (overlap * 0.5);
+        self.set_position(self_pos - separation);
+        other.set_position(other_pos + separation);
     }
 }

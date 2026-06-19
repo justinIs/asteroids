@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::vec_util;
+use crate::{asteroid::Asteroid, vec_util};
 
 const ROTATION_SPEED: f32 = std::f32::consts::PI;
 const THRUST: f32 = 200.0;
@@ -58,18 +58,62 @@ impl Ship {
         }
     }
 
+    // Dimensions for the ship
+    const SHIP_POINTS: [Vec2; 4] = [
+        // Nose
+        vec2(0.0, -18.0),
+        // Right rear
+        vec2(12.0, 12.0),
+        // Bottom
+        vec2(0.0, 5.0),
+        // Left rear
+        vec2(-12.0, 12.0),
+    ];
+
     pub fn draw(&self) {
-        let nose = vec2(0.0, -18.0);
-        let left_rear = vec2(-12.0, 12.0);
-        let right_rear = vec2(12.0, 12.0);
-        let back = vec2(0.0, 5.0);
+        let w = screen_width();
+        let h = screen_height();
+        let x = self.position.x;
+        let y = self.position.y;
 
-        let [n, l, r, b] = [nose, left_rear, right_rear, back]
-            .map(|p| vec_util::rotate(self.rotation, p) + self.position);
+        // Use bounding circle with radius of distance from center to farthest vertex (nose)
+        let r = Self::SHIP_POINTS[0].y.abs();
 
-        draw_line(l.x, l.y, n.x, n.y, 1.5, WHITE);
-        draw_line(n.x, n.y, r.x, r.y, 1.5, WHITE);
-        draw_line(r.x, r.y, b.x, b.y, 1.5, WHITE);
-        draw_line(b.x, b.y, l.x, l.y, 1.5, WHITE);
+        let mut x_centers = vec![x];
+        if x + r > w {
+            x_centers.push(x - w);
+        } else if x - r < 0.0 {
+            x_centers.push(x + w);
+        }
+
+        let mut y_centers = vec![y];
+        if y + r > h {
+            y_centers.push(y - h);
+        } else if y - r < 0.0 {
+            y_centers.push(y + h);
+        }
+
+        for x in &x_centers {
+            for y in &y_centers {
+                self.draw_at(vec2(*x, *y));
+            }
+        }
+    }
+
+    fn draw_at(&self, center: Vec2) {
+        let rotated = Self::SHIP_POINTS.map(|p| vec_util::rotate(self.rotation, p) + center);
+
+        for i in 0..rotated.len() {
+            let p1 = rotated[i];
+            let p2 = rotated[(i + 1) % rotated.len()];
+
+            draw_line(p1.x, p1.y, p2.x, p2.y, 1.5, WHITE);
+        }
+    }
+
+    pub fn collides_with(&self, a: &Asteroid) -> bool {
+        let (ship_pos, ship_rad) = self.bounds();
+        let (a_pos, a_rad) = a.bounds();
+        vec_util::circles_overlap_wrapped(ship_pos, ship_rad, a_pos, a_rad)
     }
 }
