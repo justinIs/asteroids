@@ -28,7 +28,6 @@ impl AsteroidSize {
 }
 
 pub struct Asteroid {
-    id: i32,
     size: AsteroidSize,
     position: Vec2,
     rotation: f32,
@@ -38,7 +37,7 @@ pub struct Asteroid {
 }
 
 impl Asteroid {
-    pub fn new(id: i32, size: AsteroidSize, position: Vec2) -> Asteroid {
+    pub fn new(size: AsteroidSize, position: Vec2) -> Asteroid {
         let edges = rand::gen_range(MIN_ASTEROID_EDGES, MAX_ASTERIOD_EDGES + 1);
         let rotation = rand::gen_range(0.0, TAU);
         let verticies = Self::gen_verticies(&size, edges);
@@ -47,7 +46,6 @@ impl Asteroid {
         let velocity = direction * INITIAL_ASTEROID_SPEED;
 
         Asteroid {
-            id,
             size,
             position,
             rotation,

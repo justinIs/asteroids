@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 mod asteroid;
+mod bullet;
 mod ship;
 mod vec_util;
 
@@ -24,6 +25,7 @@ async fn main() {
     let mut ship = ship::Ship::new(ship_pos);
 
     let mut asteroids = create_asteroids(ship_pos);
+    let mut bullets: Vec<bullet::Bullet> = Vec::new();
 
     let mut hit = false;
 
@@ -41,6 +43,16 @@ async fn main() {
             ship.update(dt);
             for a in &mut asteroids {
                 a.update(dt);
+            }
+            for b in &mut bullets {
+                b.update(dt);
+            }
+            bullets.retain(|b| !b.is_expired());
+
+            // Shots fired
+            if is_key_pressed(KeyCode::Space) {
+                let (pos, dir) = ship.muzzle();
+                bullets.push(bullet::Bullet::new(pos, dir));
             }
 
             // Collision detection
@@ -70,6 +82,9 @@ async fn main() {
         for a in &asteroids {
             a.draw();
         }
+        for b in &bullets {
+            b.draw();
+        }
 
         if hit && paused {
             draw_centered_outlined("HIT", 80.0, WHITE, BLACK);
@@ -78,6 +93,7 @@ async fn main() {
         if paused && hit && is_key_down(KeyCode::Space) {
             ship = ship::Ship::new(ship_pos);
             asteroids = create_asteroids(ship_pos);
+            bullets.clear();
             hit = false;
             paused = false;
         }
@@ -92,13 +108,9 @@ fn create_asteroids(ship_pos: Vec2) -> Vec<asteroid::Asteroid> {
     //                    ~ship_radius + buffer
     let asteroid_clearance = 20.0 + 150.0;
 
-    for i in 0..ASTEROID_COUNT {
+    for _ in 0..ASTEROID_COUNT {
         let pos = asteroid::Asteroid::gen_position(ship_pos, asteroid_clearance, &asteroids);
-        asteroids.push(asteroid::Asteroid::new(
-            i as i32,
-            asteroid::AsteroidSize::Large,
-            pos,
-        ));
+        asteroids.push(asteroid::Asteroid::new(asteroid::AsteroidSize::Large, pos));
     }
     asteroids
 }

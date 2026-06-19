@@ -22,7 +22,14 @@ impl Ship {
     }
 
     pub fn bounds(&self) -> (Vec2, f32) {
-        (self.position, 18.0)
+        (self.position, Self::SHIP_POINTS[0].y.abs())
+    }
+
+    pub fn muzzle(&self) -> (Vec2, Vec2) {
+        let direction = vec2(self.rotation.sin(), -self.rotation.cos());
+        let nos_pos = self.position + direction * Self::SHIP_POINTS[0].y.abs();
+
+        (nos_pos, direction)
     }
 
     pub fn update(&mut self, dt: f32) {
