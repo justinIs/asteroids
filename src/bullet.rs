@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-const MAX_BULLET_DISTANCE_RATIO: f32 = 0.5;
+const MAX_BULLET_DISTANCE_RATIO: f32 = 0.65;
 const BULLET_SPEED: f32 = 150.0;
 
 pub struct Bullet {

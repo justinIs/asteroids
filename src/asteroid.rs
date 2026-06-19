@@ -19,9 +19,9 @@ pub enum AsteroidSize {
 impl AsteroidSize {
     pub fn radius(&self) -> f32 {
         match self {
-            AsteroidSize::Small => 7.5,
-            AsteroidSize::Medium => 15.0,
-            AsteroidSize::Large => 30.0,
+            AsteroidSize::Small => 10.0,
+            AsteroidSize::Medium => 20.0,
+            AsteroidSize::Large => 40.0,
         }
     }
 

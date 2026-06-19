@@ -112,7 +112,7 @@ async fn main() {
             draw_centered_outlined("HIT", 80.0, WHITE, BLACK);
         }
 
-        if paused && crashed && is_key_down(KeyCode::Space) {
+        if paused && crashed && is_key_down(KeyCode::Enter) {
             ship = ship::Ship::new(ship_pos);
             asteroids = create_asteroids(ship_pos);
             bullets.clear();
