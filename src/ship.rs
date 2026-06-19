@@ -1,10 +1,16 @@
 use macroquad::prelude::*;
 
-use crate::{asteroid::Asteroid, vec_util};
+use crate::{asteroid::Asteroid, layout, vec_util};
 
-const ROTATION_SPEED: f32 = std::f32::consts::PI;
-const THRUST: f32 = 200.0;
-const MAX_VELOCITY: f32 = 400.0;
+const ROTATION_SPEED: f32 = std::f32::consts::PI + 1.5;
+const THRUST: f32 = 100.0;
+const MAX_VELOCITY: f32 = 200.0;
+
+pub struct Controls {
+    pub rotate_left: bool,
+    pub rotate_right: bool,
+    pub thrust: bool,
+}
 
 pub struct Ship {
     position: Vec2,
@@ -32,20 +38,20 @@ impl Ship {
         (nos_pos, direction)
     }
 
-    pub fn update(&mut self, dt: f32) {
+    pub fn update(&mut self, dt: f32, controls: &Controls) {
         // Handle rotation
-        let right = is_key_down(KeyCode::Right) || is_key_down(KeyCode::D);
-        let left = is_key_down(KeyCode::Left) || is_key_down(KeyCode::A);
-        if right && !left {
+        // let right = is_key_down(KeyCode::Right) || is_key_down(KeyCode::D);
+        // let left = is_key_down(KeyCode::Left) || is_key_down(KeyCode::A);
+        if controls.rotate_right && !controls.rotate_left {
             self.rotation += ROTATION_SPEED * dt;
-        } else if left && !right {
+        } else if controls.rotate_left && !controls.rotate_right {
             self.rotation -= ROTATION_SPEED * dt;
         }
         self.rotation = self.rotation.rem_euclid(std::f32::consts::TAU);
 
         // Handle thrust
-        let up = is_key_down(KeyCode::Up) || is_key_down(KeyCode::W);
-        if up {
+        // let up = is_key_down(KeyCode::Up) || is_key_down(KeyCode::W);
+        if controls.thrust {
             let direction = vec2(self.rotation.sin(), -self.rotation.cos());
             self.velocity += direction * THRUST * dt;
             self.velocity = self.velocity.clamp_length_max(MAX_VELOCITY);
@@ -53,15 +59,15 @@ impl Ship {
 
         // Update position based on velocity
         self.position += self.velocity * dt;
-        if self.position.x > screen_width() {
+        if self.position.x > layout::WORLD_W {
             self.position.x = 0.0;
         } else if self.position.x < 0.0 {
-            self.position.x = screen_width();
+            self.position.x = layout::WORLD_W;
         }
-        if self.position.y > screen_height() {
+        if self.position.y > layout::WORLD_H {
             self.position.y = 0.0;
         } else if self.position.y < 0.0 {
-            self.position.y = screen_height();
+            self.position.y = layout::WORLD_H;
         }
     }
 
@@ -78,8 +84,8 @@ impl Ship {
     ];
 
     pub fn draw(&self) {
-        let w = screen_width();
-        let h = screen_height();
+        let w = layout::WORLD_W;
+        let h = layout::WORLD_H;
         let x = self.position.x;
         let y = self.position.y;
 

@@ -1,7 +1,9 @@
 use macroquad::prelude::*;
 
+use crate::layout;
+
 const MAX_BULLET_DISTANCE_RATIO: f32 = 0.65;
-const BULLET_SPEED: f32 = 150.0;
+const BULLET_SPEED: f32 = 250.0;
 
 pub struct Bullet {
     position: Vec2,
@@ -20,7 +22,7 @@ impl Bullet {
     }
 
     fn max_bullet_distance() -> f32 {
-        MAX_BULLET_DISTANCE_RATIO * screen_height().max(screen_width())
+        MAX_BULLET_DISTANCE_RATIO * layout::WORLD_H.max(layout::WORLD_W)
     }
 
     pub fn position(&self) -> Vec2 {
@@ -44,8 +46,8 @@ impl Bullet {
     pub fn update(&mut self, dt: f32) {
         let step = self.velocity * dt;
         self.position += step;
-        self.position.x = self.position.x.rem_euclid(screen_width());
-        self.position.y = self.position.y.rem_euclid(screen_height());
+        self.position.x = self.position.x.rem_euclid(layout::WORLD_W);
+        self.position.y = self.position.y.rem_euclid(layout::WORLD_H);
         self.distance_traveled += step.abs().length()
     }
 }

@@ -1,7 +1,10 @@
 use macroquad::prelude::*;
 
+use crate::layout::{WORLD_H, WORLD_W};
+
 mod asteroid;
 mod bullet;
+mod layout;
 mod ship;
 mod vec_util;
 
@@ -11,6 +14,7 @@ fn window_conf() -> Conf {
         window_width: 900,
         window_height: 900,
         window_resizable: false,
+        high_dpi: true,
         ..Default::default()
     }
 }
@@ -22,7 +26,7 @@ async fn main() {
     println!("screen: {}, {}", screen_width(), screen_height());
     let mut paused = false;
 
-    let ship_pos = vec2(screen_width() / 2.0, screen_height() / 2.0);
+    let ship_pos = vec2(WORLD_W / 2.0, WORLD_H / 2.0);
     let mut ship = ship::Ship::new(ship_pos);
 
     let mut asteroids = create_asteroids(ship_pos);
@@ -33,6 +37,22 @@ async fn main() {
     loop {
         clear_background(BLACK);
 
+        let (controls, fire) = read_controls();
+
+        let scale = (screen_width() / WORLD_W).min(screen_height() / WORLD_H);
+        let (vw, vh) = (WORLD_W * scale, WORLD_H * scale);
+
+        let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, WORLD_W, WORLD_H));
+        cam.zoom.y = -cam.zoom.y;
+        let dpi = miniquad::window::dpi_scale();
+        cam.viewport = Some((
+            ((screen_width() - vw) / 2.0 * dpi) as i32, // center horizontally
+            ((screen_height() - vh) / 2.0 * dpi) as i32, // center vertically
+            (vw * dpi) as i32,
+            (vh * dpi) as i32,
+        ));
+        set_camera(&cam);
+
         let dt = get_frame_time();
 
         if is_key_pressed(KeyCode::Enter) {
@@ -41,7 +61,7 @@ async fn main() {
 
         if !paused {
             // Position updates
-            ship.update(dt);
+            ship.update(dt, &controls);
             for a in &mut asteroids {
                 a.update(dt);
             }
@@ -51,7 +71,7 @@ async fn main() {
             bullets.retain(|b| !b.is_expired());
 
             // Shots fired
-            if is_key_pressed(KeyCode::Space) {
+            if fire {
                 let (pos, dir) = ship.muzzle();
                 bullets.push(bullet::Bullet::new(pos, dir));
             }
@@ -120,7 +140,11 @@ async fn main() {
             paused = false;
         }
 
-        next_frame().await
+        set_default_camera();
+
+        draw_touch_buttons();
+
+        next_frame().await;
     }
 }
 
@@ -139,8 +163,8 @@ fn create_asteroids(ship_pos: Vec2) -> Vec<asteroid::Asteroid> {
 
 fn draw_centered_outlined(text: &str, font_size: f32, fill: Color, outline: Color) {
     let dims = measure_text(text, None, font_size as u16, 1.0);
-    let x = (screen_width() - dims.width) / 2.0;
-    let y = (screen_height() - dims.height) / 2.0;
+    let x = (layout::WORLD_W - dims.width) / 2.0;
+    let y = (layout::WORLD_H - dims.height) / 2.0;
 
     let t = 2.0;
     for (dx, dy) in [
@@ -156,4 +180,103 @@ fn draw_centered_outlined(text: &str, font_size: f32, fill: Color, outline: Colo
         draw_text(text, x + dx, y + dy, font_size, outline);
     }
     draw_text(text, x, y, font_size, fill);
+}
+
+// Touch HUD
+
+#[derive(Clone, Copy)]
+enum Action {
+    RotateLeft,
+    RotateRight,
+    Thrust,
+    Fire,
+}
+
+struct Button {
+    rect: Rect,
+    label: &'static str,
+    action: Action,
+}
+
+fn button_layout() -> [Button; 4] {
+    let (w, h) = (screen_width(), screen_height());
+    let s = 90.0; // button size
+    let m = 28.0; // margin
+    let y = h - s - m;
+    [
+        Button {
+            rect: Rect::new(m, y, s, s),
+            label: "<",
+            action: Action::RotateLeft,
+        },
+        Button {
+            rect: Rect::new(m + s + 16.0, y, s, s),
+            label: ">",
+            action: Action::RotateRight,
+        },
+        Button {
+            rect: Rect::new(w - s - m, y - s - m, s, s),
+            label: "^",
+            action: Action::Thrust,
+        },
+        Button {
+            rect: Rect::new(w - s - m, y, s, s),
+            label: "0",
+            action: Action::Fire,
+        },
+    ]
+}
+
+fn pointers() -> Vec<Vec2> {
+    let mut ps: Vec<Vec2> = touches().iter().map(|t| t.position).collect();
+
+    if is_mouse_button_down(MouseButton::Left) {
+        ps.push(mouse_position().into());
+    }
+
+    ps
+}
+
+fn read_controls() -> (ship::Controls, bool) {
+    let ps = pointers();
+    let mut c = ship::Controls {
+        rotate_left: is_key_down(KeyCode::Left) || is_key_down(KeyCode::A),
+        rotate_right: is_key_down(KeyCode::Right) || is_key_down(KeyCode::D),
+        thrust: is_key_down(KeyCode::Up) || is_key_down(KeyCode::W),
+    };
+    let mut fire = false;
+
+    for b in button_layout() {
+        if ps.iter().any(|p| b.rect.contains(*p)) {
+            match b.action {
+                Action::RotateLeft => c.rotate_left = true,
+                Action::RotateRight => c.rotate_right = true,
+                Action::Thrust => c.thrust = true,
+                Action::Fire => fire = true,
+            }
+        }
+    }
+    (c, fire)
+}
+
+fn draw_touch_buttons() {
+    let ps = pointers();
+    for b in button_layout() {
+        let pressed = ps.iter().any(|p| b.rect.contains(*p));
+        let fill = if pressed {
+            Color::new(1.0, 1.0, 1.0, 0.35)
+        } else {
+            Color::new(1.0, 1.0, 1.0, 0.12)
+        };
+
+        draw_rectangle(b.rect.x, b.rect.y, b.rect.w, b.rect.h, fill);
+        draw_rectangle_lines(b.rect.x, b.rect.y, b.rect.w, b.rect.h, 2.0, WHITE);
+        draw_text(
+            b.label,
+            b.rect.x + b.rect.w / 2.0 - 8.0,
+            b.rect.y + b.rect.h / 2.0 + 8.0,
+            36.0,
+            WHITE,
+        );
+    }
 }

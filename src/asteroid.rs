@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 use std::f32::consts::{PI, TAU};
 
-use crate::vec_util;
+use crate::{layout, vec_util};
 
 const MAX_ASTERIOD_EDGES: u8 = 9;
 const MIN_ASTEROID_EDGES: u8 = 5;
@@ -137,8 +137,8 @@ impl Asteroid {
     pub fn gen_position(avoid_pos: Vec2, min_clearance: f32, other_asteroids: &[Asteroid]) -> Vec2 {
         loop {
             let candidate = vec2(
-                rand::gen_range(0.0, screen_width()),
-                rand::gen_range(0.0, screen_height()),
+                rand::gen_range(0.0, layout::WORLD_W),
+                rand::gen_range(0.0, layout::WORLD_H),
             );
             let mut overlaps_other = false;
             for other in other_asteroids {
@@ -156,8 +156,8 @@ impl Asteroid {
     }
 
     pub fn draw(&self) {
-        let w = screen_width();
-        let h = screen_height();
+        let w = layout::WORLD_W;
+        let h = layout::WORLD_H;
         let r = self.size.radius();
         let x = self.position.x;
         let y = self.position.y;
@@ -203,9 +203,9 @@ impl Asteroid {
     }
 
     fn wrap_position(&mut self) {
-        self.position.x = self.position.x.rem_euclid(screen_width());
+        self.position.x = self.position.x.rem_euclid(layout::WORLD_W);
 
-        self.position.y = self.position.y.rem_euclid(screen_height());
+        self.position.y = self.position.y.rem_euclid(layout::WORLD_H);
     }
 
     pub fn find_collisions(asteroids: &[Asteroid]) -> Vec<(usize, usize)> {

@@ -33,18 +33,6 @@ npx serve dist
 
 Click the canvas once if keyboard input isn't picked up — it needs focus.
 
-## Project layout
-
-| Path                 | Purpose                                            |
-| -------------------- | -------------------------------------------------- |
-| `src/main.rs`        | Window setup and the game loop                     |
-| `src/ship.rs`        | Player ship: movement and drawing                  |
-| `src/asteroid.rs`    | Asteroid generation, motion, and rendering         |
-| `src/vec_util.rs`    | Vector helpers (rotation, collision math)          |
-| `index.html`         | Browser loader for the WASM build                  |
-| `build-web.sh`       | Builds the WASM target and assembles `dist/`       |
-| `.cargo/config.toml` | WASM linker flag (`--allow-undefined`) for the JS shim |
-
 ## Notes
 
 - The WASM build relies on macroquad's `mq_js_bundle.js` shim (loaded from a CDN
