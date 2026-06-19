@@ -1,7 +1,7 @@
 use crate::ship;
 
 pub struct Controls {
-    pub ship_controls: ship::Controls,
+    pub ship_controls: ship::ShipControls,
     pub fire: bool,
     pub pause: bool,
     pub using_touch: bool,

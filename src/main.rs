@@ -24,8 +24,6 @@ fn window_conf() -> Conf {
     }
 }
 
-const ASTEROID_COUNT: usize = 5;
-
 #[macroquad::main(window_conf)]
 async fn main() {
     println!("screen: {}, {}", screen_width(), screen_height());
@@ -79,110 +77,97 @@ async fn main() {
             }
         }
 
-        if is_key_pressed(KeyCode::Enter) {
-            paused = !paused;
-        }
+        // if is_key_pressed(KeyCode::Enter) {
+        //     paused = !paused;
+        // }
 
-        if !paused {
-            // Position updates
-            ship.update(dt, &c);
-            for a in &mut asteroids {
-                a.update(dt);
-            }
-            for b in &mut bullets {
-                b.update(dt);
-            }
-            bullets.retain(|b| !b.is_expired());
+        // if !paused {
+        //     // Position updates
+        //     ship.update(dt, &c);
+        //     for a in &mut asteroids {
+        //         a.update(dt);
+        //     }
+        //     for b in &mut bullets {
+        //         b.update(dt);
+        //     }
+        //     bullets.retain(|b| !b.is_expired());
 
-            // Shots fired
-            if fire {
-                let (pos, dir) = ship.muzzle();
-                bullets.push(bullet::Bullet::new(pos, dir));
-            }
+        //     // Shots fired
+        //     if fire {
+        //         let (pos, dir) = ship.muzzle();
+        //         bullets.push(bullet::Bullet::new(pos, dir));
+        //     }
 
-            // Collision detection
+        //     // Collision detection
 
-            // Asteroid <-> spacehsip collision
-            crashed = asteroids.iter().any(|a| ship.collides_with(a));
+        //     // Asteroid <-> spacehsip collision
+        //     crashed = asteroids.iter().any(|a| ship.collides_with(a));
 
-            // Asteroid <-> asteroid collision
-            let collisions = asteroid::Asteroid::find_collisions(&asteroids);
-            for (i, j) in collisions {
-                let [a, b] = asteroids
-                    .get_disjoint_mut([i, j])
-                    .expect("i and j are distinct");
+        //     // Asteroid <-> asteroid collision
+        //     let collisions = asteroid::Asteroid::find_collisions(&asteroids);
+        //     for (i, j) in collisions {
+        //         let [a, b] = asteroids
+        //             .get_disjoint_mut([i, j])
+        //             .expect("i and j are distinct");
 
-                a.collide_with(b);
-            }
+        //         a.collide_with(b);
+        //     }
 
-            // Asteroid <-> bullet collision
-            let mut hit_asteroids = vec![false; asteroids.len()];
-            bullets.retain(|b| {
-                match asteroids.iter().position(|a| {
-                    let (a_pos, a_rad) = a.bounds();
-                    // TODO: handle double it (if the asteroid being checkd here already was hit it
-                    // would eat a bullet for no reason)
-                    vec_util::circles_overlap_wrapped(b.position(), 0.0, a_pos, a_rad)
-                }) {
-                    Some(i) => {
-                        hit_asteroids[i] = true;
-                        false
-                    }
-                    None => true,
-                }
-            });
+        //     // Asteroid <-> bullet collision
+        //     let mut hit_asteroids = vec![false; asteroids.len()];
+        //     bullets.retain(|b| {
+        //         match asteroids.iter().position(|a| {
+        //             let (a_pos, a_rad) = a.bounds();
+        //             // TODO: handle double it (if the asteroid being checkd here already was hit it
+        //             // would eat a bullet for no reason)
+        //             vec_util::circles_overlap_wrapped(b.position(), 0.0, a_pos, a_rad)
+        //         }) {
+        //             Some(i) => {
+        //                 hit_asteroids[i] = true;
+        //                 false
+        //             }
+        //             None => true,
+        //         }
+        //     });
 
-            for (i, a) in std::mem::take(&mut asteroids).into_iter().enumerate() {
-                if hit_asteroids[i] {
-                    asteroids.extend(a.split());
-                } else {
-                    asteroids.push(a);
-                }
-            }
-        }
-        if crashed {
-            paused = true;
-        }
+        //     for (i, a) in std::mem::take(&mut asteroids).into_iter().enumerate() {
+        //         if hit_asteroids[i] {
+        //             asteroids.extend(a.split());
+        //         } else {
+        //             asteroids.push(a);
+        //         }
+        //     }
+        // }
+        // if crashed {
+        //     paused = true;
+        // }
 
-        ship.draw();
-        for a in &asteroids {
-            a.draw();
-        }
-        for b in &bullets {
-            b.draw();
-        }
+        // ship.draw();
+        // for a in &asteroids {
+        //     a.draw();
+        // }
+        // for b in &bullets {
+        //     b.draw();
+        // }
 
-        if crashed && paused {
-            draw_centered_outlined("HIT", 80.0, WHITE, BLACK);
-        }
+        // if crashed && paused {
+        //     draw_centered_outlined("HIT", 80.0, WHITE, BLACK);
+        // }
 
-        if paused && crashed && is_key_down(KeyCode::Enter) {
-            ship = ship::Ship::new(ship_pos);
-            asteroids = create_asteroids(ship_pos);
-            bullets.clear();
-            crashed = false;
-            paused = false;
-        }
+        // if paused && crashed && is_key_down(KeyCode::Enter) {
+        //     ship = ship::Ship::new(ship_pos);
+        //     asteroids = create_asteroids(ship_pos);
+        //     bullets.clear();
+        //     crashed = false;
+        //     paused = false;
+        // }
 
-        set_default_camera();
+        // set_default_camera();
 
-        draw_touch_buttons();
+        // draw_touch_buttons();
 
         next_frame().await;
     }
-}
-
-fn create_asteroids(ship_pos: Vec2) -> Vec<asteroid::Asteroid> {
-    let mut asteroids = Vec::with_capacity(ASTEROID_COUNT);
-
-    //                    ~ship_radius + buffer
-    let asteroid_clearance = 20.0 + 150.0;
-
-    for _ in 0..ASTEROID_COUNT {
-        let pos = asteroid::Asteroid::gen_position(ship_pos, asteroid_clearance, &asteroids);
-        asteroids.push(asteroid::Asteroid::new(asteroid::AsteroidSize::Large, pos));
-    }
-    asteroids
 }
 
 fn draw_centered_outlined(text: &str, font_size: f32, fill: Color, outline: Color) {
@@ -268,7 +253,7 @@ fn pointers() -> Vec<Vec2> {
 fn read_controls() -> controls::Controls {
     let ps = pointers();
     let mut c = controls::Controls {
-        ship_controls: ship::Controls {
+        ship_controls: ship::ShipControls {
             rotate_left: is_key_down(KeyCode::Left) || is_key_down(KeyCode::A),
             rotate_right: is_key_down(KeyCode::Right) || is_key_down(KeyCode::D),
             thrust: is_key_down(KeyCode::Up) || is_key_down(KeyCode::W),
