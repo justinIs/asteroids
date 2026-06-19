@@ -244,7 +244,7 @@ fn read_controls() -> (ship::Controls, bool) {
         rotate_right: is_key_down(KeyCode::Right) || is_key_down(KeyCode::D),
         thrust: is_key_down(KeyCode::Up) || is_key_down(KeyCode::W),
     };
-    let mut fire = false;
+    let mut fire = is_key_pressed(KeyCode::Space);
 
     for b in button_layout() {
         if ps.iter().any(|p| b.rect.contains(*p)) {
