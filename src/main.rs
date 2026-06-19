@@ -19,6 +19,7 @@ const ASTEROID_COUNT: usize = 5;
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    println!("screen: {}, {}", screen_width(), screen_height());
     let mut paused = false;
 
     let ship_pos = vec2(screen_width() / 2.0, screen_height() / 2.0);
@@ -27,7 +28,7 @@ async fn main() {
     let mut asteroids = create_asteroids(ship_pos);
     let mut bullets: Vec<bullet::Bullet> = Vec::new();
 
-    let mut hit = false;
+    let mut crashed = false;
 
     loop {
         clear_background(BLACK);
@@ -58,14 +59,10 @@ async fn main() {
             // Collision detection
 
             // Asteroid <-> spacehsip collision
-            hit = asteroids.iter().any(|a| ship.collides_with(a));
+            crashed = asteroids.iter().any(|a| ship.collides_with(a));
 
             // Asteroid <-> asteroid collision
-
-            // Detect
             let collisions = asteroid::Asteroid::find_collisions(&asteroids);
-
-            // Resolve
             for (i, j) in collisions {
                 let [a, b] = asteroids
                     .get_disjoint_mut([i, j])
@@ -73,8 +70,33 @@ async fn main() {
 
                 a.collide_with(b);
             }
+
+            // Asteroid <-> bullet collision
+            let mut hit_asteroids = vec![false; asteroids.len()];
+            bullets.retain(|b| {
+                match asteroids.iter().position(|a| {
+                    let (a_pos, a_rad) = a.bounds();
+                    // TODO: handle double it (if the asteroid being checkd here already was hit it
+                    // would eat a bullet for no reason)
+                    vec_util::circles_overlap_wrapped(b.position(), 0.0, a_pos, a_rad)
+                }) {
+                    Some(i) => {
+                        hit_asteroids[i] = true;
+                        false
+                    }
+                    None => true,
+                }
+            });
+
+            for (i, a) in std::mem::take(&mut asteroids).into_iter().enumerate() {
+                if hit_asteroids[i] {
+                    asteroids.extend(a.split());
+                } else {
+                    asteroids.push(a);
+                }
+            }
         }
-        if hit {
+        if crashed {
             paused = true;
         }
 
@@ -86,15 +108,15 @@ async fn main() {
             b.draw();
         }
 
-        if hit && paused {
+        if crashed && paused {
             draw_centered_outlined("HIT", 80.0, WHITE, BLACK);
         }
 
-        if paused && hit && is_key_down(KeyCode::Space) {
+        if paused && crashed && is_key_down(KeyCode::Space) {
             ship = ship::Ship::new(ship_pos);
             asteroids = create_asteroids(ship_pos);
             bullets.clear();
-            hit = false;
+            crashed = false;
             paused = false;
         }
 

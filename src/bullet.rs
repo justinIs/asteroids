@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-const MAX_BULLET_DISTANCE: f32 = 450.0;
+const MAX_BULLET_DISTANCE_RATIO: f32 = 0.5;
 const BULLET_SPEED: f32 = 150.0;
 
 pub struct Bullet {
@@ -19,8 +19,16 @@ impl Bullet {
         }
     }
 
+    fn max_bullet_distance() -> f32 {
+        MAX_BULLET_DISTANCE_RATIO * screen_height().max(screen_width())
+    }
+
+    pub fn position(&self) -> Vec2 {
+        self.position
+    }
+
     pub fn is_expired(&self) -> bool {
-        self.distance_traveled >= MAX_BULLET_DISTANCE
+        self.distance_traveled >= Self::max_bullet_distance()
     }
 
     pub fn draw(&self) {
@@ -38,6 +46,6 @@ impl Bullet {
         self.position += step;
         self.position.x = self.position.x.rem_euclid(screen_width());
         self.position.y = self.position.y.rem_euclid(screen_height());
-        self.distance_traveled += step.length()
+        self.distance_traveled += step.abs().length()
     }
 }

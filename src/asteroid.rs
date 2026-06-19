@@ -5,7 +5,6 @@ use crate::vec_util;
 
 const MAX_ASTERIOD_EDGES: u8 = 9;
 const MIN_ASTEROID_EDGES: u8 = 5;
-const INITIAL_ASTEROID_SPEED: f32 = 50.0;
 
 // Spin gain coefficient
 const K: f32 = 1.5;
@@ -23,6 +22,22 @@ impl AsteroidSize {
             AsteroidSize::Small => 7.5,
             AsteroidSize::Medium => 15.0,
             AsteroidSize::Large => 30.0,
+        }
+    }
+
+    fn initial_speed(&self) -> f32 {
+        match self {
+            AsteroidSize::Small => 70.0,
+            AsteroidSize::Medium => 60.0,
+            AsteroidSize::Large => 50.0,
+        }
+    }
+
+    fn smaller(&self) -> Option<AsteroidSize> {
+        match self {
+            AsteroidSize::Large => Some(AsteroidSize::Medium),
+            AsteroidSize::Medium => Some(AsteroidSize::Small),
+            AsteroidSize::Small => None,
         }
     }
 }
@@ -43,7 +58,23 @@ impl Asteroid {
         let verticies = Self::gen_verticies(&size, edges);
         let spin = rand::gen_range(-PI, PI);
         let direction = Self::gen_direction();
-        let velocity = direction * INITIAL_ASTEROID_SPEED;
+        let velocity = direction * size.initial_speed();
+
+        Asteroid {
+            size,
+            position,
+            rotation,
+            verticies,
+            spin,
+            velocity,
+        }
+    }
+
+    fn with_velocity(size: AsteroidSize, position: Vec2, velocity: Vec2) -> Asteroid {
+        let edges = rand::gen_range(MIN_ASTEROID_EDGES, MAX_ASTERIOD_EDGES + 1);
+        let rotation = rand::gen_range(0.0, TAU);
+        let verticies = Self::gen_verticies(&size, edges);
+        let spin = rand::gen_range(-PI, PI);
 
         Asteroid {
             size,
@@ -226,5 +257,18 @@ impl Asteroid {
         let separation = n * (overlap * 0.5);
         self.set_position(self_pos - separation);
         other.set_position(other_pos + separation);
+    }
+
+    pub fn split(&self) -> Vec<Asteroid> {
+        let Some(size) = self.size.smaller() else {
+            return Vec::new();
+        };
+
+        let direction = Self::gen_direction();
+        let velocity = direction * size.initial_speed();
+        vec![
+            Asteroid::with_velocity(size, self.position + direction * size.radius(), velocity),
+            Asteroid::with_velocity(size, self.position - direction * size.radius(), -velocity),
+        ]
     }
 }
