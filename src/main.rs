@@ -1,11 +1,16 @@
 use macroquad::prelude::*;
 
-use crate::layout::{WORLD_H, WORLD_W};
+use crate::{game::Game, screen::Screen, transition::Transition};
 
 mod asteroid;
 mod bullet;
+mod camera;
+mod controls;
+mod game;
 mod layout;
+mod screen;
 mod ship;
+mod transition;
 mod vec_util;
 
 fn window_conf() -> Conf {
@@ -24,36 +29,55 @@ const ASTEROID_COUNT: usize = 5;
 #[macroquad::main(window_conf)]
 async fn main() {
     println!("screen: {}, {}", screen_width(), screen_height());
-    let mut paused = false;
 
-    let ship_pos = vec2(WORLD_W / 2.0, WORLD_H / 2.0);
-    let mut ship = ship::Ship::new(ship_pos);
-
-    let mut asteroids = create_asteroids(ship_pos);
-    let mut bullets: Vec<bullet::Bullet> = Vec::new();
-
-    let mut crashed = false;
+    let mut screen = Screen::Start;
 
     loop {
         clear_background(BLACK);
 
-        let (controls, fire) = read_controls();
+        let c = read_controls();
 
-        let scale = (screen_width() / WORLD_W).min(screen_height() / WORLD_H);
-        let (vw, vh) = (WORLD_W * scale, WORLD_H * scale);
-
-        let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, WORLD_W, WORLD_H));
-        cam.zoom.y = -cam.zoom.y;
-        let dpi = miniquad::window::dpi_scale();
-        cam.viewport = Some((
-            ((screen_width() - vw) / 2.0 * dpi) as i32, // center horizontally
-            ((screen_height() - vh) / 2.0 * dpi) as i32, // center vertically
-            (vw * dpi) as i32,
-            (vh * dpi) as i32,
-        ));
-        set_camera(&cam);
+        set_camera(&camera::world_camera());
 
         let dt = get_frame_time();
+
+        let transition = match &mut screen {
+            Screen::Start => {
+                if c.any_press() {
+                    Transition::NewGame
+                } else {
+                    Transition::None
+                }
+            }
+            Screen::Playing(game) => game.update(dt, &c),
+            Screen::GameOver { score } => {
+                if c.any_press() {
+                    Transition::ToStart
+                } else {
+                    Transition::None
+                }
+            }
+        };
+
+        match &screen {
+            Screen::Start => draw_start(),
+            Screen::Playing(game) => game.draw(),
+            Screen::GameOver { score } => draw_game_over(*score),
+        }
+
+        set_default_camera();
+        if c.using_touch && matches!(screen, Screen::Playing(_)) {
+            draw_touch_buttons();
+        }
+
+        match transition {
+            Transition::None => {}
+            Transition::NewGame => screen = Screen::Playing(Game::new()),
+            Transition::ToStart => screen = Screen::Start,
+            Transition::GameOver { score } => {
+                screen = Screen::GameOver { score };
+            }
+        }
 
         if is_key_pressed(KeyCode::Enter) {
             paused = !paused;
@@ -61,7 +85,7 @@ async fn main() {
 
         if !paused {
             // Position updates
-            ship.update(dt, &controls);
+            ship.update(dt, &c);
             for a in &mut asteroids {
                 a.update(dt);
             }
@@ -182,6 +206,10 @@ fn draw_centered_outlined(text: &str, font_size: f32, fill: Color, outline: Colo
     draw_text(text, x, y, font_size, fill);
 }
 
+fn draw_start() {}
+
+fn draw_game_over(score: u32) {}
+
 // Touch HUD
 
 #[derive(Clone, Copy)]
@@ -237,26 +265,30 @@ fn pointers() -> Vec<Vec2> {
     ps
 }
 
-fn read_controls() -> (ship::Controls, bool) {
+fn read_controls() -> controls::Controls {
     let ps = pointers();
-    let mut c = ship::Controls {
-        rotate_left: is_key_down(KeyCode::Left) || is_key_down(KeyCode::A),
-        rotate_right: is_key_down(KeyCode::Right) || is_key_down(KeyCode::D),
-        thrust: is_key_down(KeyCode::Up) || is_key_down(KeyCode::W),
+    let mut c = controls::Controls {
+        ship_controls: ship::Controls {
+            rotate_left: is_key_down(KeyCode::Left) || is_key_down(KeyCode::A),
+            rotate_right: is_key_down(KeyCode::Right) || is_key_down(KeyCode::D),
+            thrust: is_key_down(KeyCode::Up) || is_key_down(KeyCode::W),
+        },
+        pause: is_key_pressed(KeyCode::Enter),
+        fire: is_key_pressed(KeyCode::Space),
+        using_touch: false,
     };
-    let mut fire = is_key_pressed(KeyCode::Space);
 
     for b in button_layout() {
         if ps.iter().any(|p| b.rect.contains(*p)) {
             match b.action {
-                Action::RotateLeft => c.rotate_left = true,
-                Action::RotateRight => c.rotate_right = true,
-                Action::Thrust => c.thrust = true,
-                Action::Fire => fire = true,
+                Action::RotateLeft => c.ship_controls.rotate_left = true,
+                Action::RotateRight => c.ship_controls.rotate_right = true,
+                Action::Thrust => c.ship_controls.thrust = true,
+                Action::Fire => c.fire = true,
             }
         }
     }
-    (c, fire)
+    c
 }
 
 fn draw_touch_buttons() {

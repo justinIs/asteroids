@@ -6,7 +6,7 @@ const ROTATION_SPEED: f32 = std::f32::consts::PI + 1.5;
 const THRUST: f32 = 100.0;
 const MAX_VELOCITY: f32 = 200.0;
 
-pub struct Controls {
+pub struct ShipControls {
     pub rotate_left: bool,
     pub rotate_right: bool,
     pub thrust: bool,
@@ -38,20 +38,20 @@ impl Ship {
         (nos_pos, direction)
     }
 
-    pub fn update(&mut self, dt: f32, controls: &Controls) {
+    pub fn update(&mut self, dt: f32, ship_controls: &ShipControls) {
         // Handle rotation
         // let right = is_key_down(KeyCode::Right) || is_key_down(KeyCode::D);
         // let left = is_key_down(KeyCode::Left) || is_key_down(KeyCode::A);
-        if controls.rotate_right && !controls.rotate_left {
+        if ship_controls.rotate_right && !ship_controls.rotate_left {
             self.rotation += ROTATION_SPEED * dt;
-        } else if controls.rotate_left && !controls.rotate_right {
+        } else if ship_controls.rotate_left && !ship_controls.rotate_right {
             self.rotation -= ROTATION_SPEED * dt;
         }
         self.rotation = self.rotation.rem_euclid(std::f32::consts::TAU);
 
         // Handle thrust
         // let up = is_key_down(KeyCode::Up) || is_key_down(KeyCode::W);
-        if controls.thrust {
+        if ship_controls.thrust {
             let direction = vec2(self.rotation.sin(), -self.rotation.cos());
             self.velocity += direction * THRUST * dt;
             self.velocity = self.velocity.clamp_length_max(MAX_VELOCITY);
