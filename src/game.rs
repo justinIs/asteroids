@@ -2,6 +2,7 @@ use crate::{asteroid, bullet, controls, layout, ship, transition, vec_util};
 use macroquad::prelude::*;
 
 const ASTEROID_COUNT: usize = 5;
+const SCORE_INC: u32 = 10;
 
 pub struct Game {
     ship: ship::Ship,
@@ -30,8 +31,15 @@ impl Game {
         }
     }
 
+    pub fn score(&self) -> u32 {
+        self.score
+    }
+
     pub fn update(&mut self, dt: f32, c: &controls::Controls) -> transition::Transition {
-        if !c.pause {
+        if c.pause {
+            self.paused = !self.paused;
+        }
+        if !self.paused {
             // Position update
             self.ship.update(dt, &c.ship_controls);
 
@@ -54,7 +62,7 @@ impl Game {
             // Asteroid <-> spaceship
             let crashed = self.asteroids.iter().any(|a| self.ship.collides_with(a));
             if crashed {
-                return transition::Transition::GameOver { score: self.score };
+                return transition::Transition::GameOver;
             }
 
             // Asteroid <-> asteroid
@@ -79,6 +87,7 @@ impl Game {
                 }) {
                     Some(i) => {
                         hit_asteroids[i] = true;
+                        self.score += SCORE_INC;
                         false
                     }
                     None => true,
@@ -104,6 +113,18 @@ impl Game {
         for b in &self.bullets {
             b.draw();
         }
+
+        self.draw_score();
+    }
+
+    fn draw_score(&self) {
+        let text = format!("{}", self.score);
+        let size = 30.0;
+        let dims = measure_text(&text, None, size as u16, 1.0);
+        let margin = 12.0;
+        let x = layout::WORLD_W - dims.width - margin;
+        let y = margin + dims.height;
+        draw_text(&text, x, y, size, WHITE);
     }
 
     fn create_asteroids(avoid_pos: Vec2, num_asteroids: usize) -> Vec<asteroid::Asteroid> {
@@ -112,7 +133,7 @@ impl Game {
         //                    ~ship_radius + buffer
         let asteroid_clearance = 20.0 + 150.0;
 
-        for _ in 0..ASTEROID_COUNT {
+        for _ in 0..num_asteroids {
             let pos = asteroid::Asteroid::gen_position(avoid_pos, asteroid_clearance, &asteroids);
             asteroids.push(asteroid::Asteroid::new(asteroid::AsteroidSize::Large, pos));
         }
