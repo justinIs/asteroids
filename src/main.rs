@@ -1,12 +1,17 @@
 use macroquad::prelude::*;
 
-use crate::{game::Game, screen::Screen, transition::Transition};
+use crate::{
+    game::{Game, GameControls},
+    input::Input,
+    screen::Screen,
+    transition::Transition,
+};
 
 mod asteroid;
 mod bullet;
 mod camera;
-mod controls;
 mod game;
+mod input;
 mod layout;
 mod screen;
 mod ship;
@@ -30,10 +35,12 @@ async fn main() {
 
     let mut screen = Screen::Start;
 
+    let mut i = input::Input::new();
+
     loop {
         clear_background(BLACK);
 
-        let c = controls::read_controls();
+        i.update();
 
         set_camera(&camera::world_camera());
 
@@ -41,25 +48,32 @@ async fn main() {
 
         let transition = match &mut screen {
             Screen::Start => {
-                if c.any_press() {
+                if i.any_press() {
                     Transition::NewGame
                 } else {
                     Transition::None
                 }
             }
-            Screen::Playing(game) => game.update(dt, &c),
+            Screen::Playing(game) => game.update(dt, &GameControls::from_input(&i)),
             Screen::GameOver(_) => {
-                if c.any_press() {
+                if i.any_press() {
                     Transition::ToStart
                 } else {
                     Transition::None
                 }
             }
         };
+        // Consume inputs held down between transitions
+        if !matches!(transition, Transition::None) {
+            i.consume();
+        }
 
         match &screen {
             Screen::Start => draw_start(),
-            Screen::Playing(game) => game.draw(),
+            Screen::Playing(game) => {
+                game.draw();
+                // draw_debug_info(i.pointers.len());
+            }
             Screen::GameOver(game) => {
                 game.draw();
                 draw_game_over(game.score())
@@ -67,8 +81,8 @@ async fn main() {
         }
 
         set_default_camera();
-        if c.using_touch && matches!(screen, Screen::Playing(_)) {
-            controls::draw_touch_buttons();
+        if i.using_touch && matches!(screen, Screen::Playing(_)) {
+            game::draw_touch_buttons(&i);
         }
 
         match transition {
@@ -139,4 +153,22 @@ fn draw_game_over(score: u32) {
     let y = game_over_y + game_over_dims.height + 8.0;
 
     draw_outlined(&score_text, x, y, 60.0, WHITE, BLACK);
+}
+
+fn draw_debug_info(pointer_len: usize) {
+    let text = format!("Debug: {}", pointer_len);
+    let dims = measure_text(&text, None, 40, 1.0);
+
+    let x = layout::WORLD_W - dims.width;
+    let y = (layout::WORLD_H - dims.height) / 2.0;
+
+    draw_outlined(&text, x, y, 40.0, WHITE, BLACK);
+
+    let text2 = Input::debug();
+    let dims2 = measure_text(&text2, None, 20, 1.0);
+
+    let x = layout::WORLD_W - dims2.width;
+    let y = y + dims2.height + 8.0;
+
+    draw_outlined(&text2, x, y, 20.0, WHITE, BLACK);
 }

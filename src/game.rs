@@ -1,8 +1,43 @@
-use crate::{asteroid, bullet, controls, layout, ship, transition, vec_util};
+use crate::{asteroid, bullet, input, layout, ship, transition, vec_util};
 use macroquad::prelude::*;
 
 const ASTEROID_COUNT: usize = 5;
 const SCORE_INC: u32 = 10;
+
+pub struct GameControls {
+    pub ship_controls: ship::ShipControls,
+    pub fire: bool,
+    pub pause: bool,
+}
+
+impl GameControls {
+    pub fn from_input(i: &input::Input) -> Self {
+        let mut c = Self {
+            ship_controls: ship::ShipControls {
+                rotate_left: i.is_key_down(KeyCode::Left) || i.is_key_down(KeyCode::A),
+                rotate_right: i.is_key_down(KeyCode::Right) || i.is_key_down(KeyCode::D),
+                thrust: i.is_key_down(KeyCode::Up) || i.is_key_down(KeyCode::W),
+            },
+            pause: is_key_pressed(KeyCode::Enter),
+            fire: i.is_key_down(KeyCode::Space),
+        };
+
+        if i.using_touch {
+            for b in button_layout() {
+                if i.is_pressed(b.rect) {
+                    match b.action {
+                        Action::RotateLeft => c.ship_controls.rotate_left = true,
+                        Action::RotateRight => c.ship_controls.rotate_right = true,
+                        Action::Thrust => c.ship_controls.thrust = true,
+                        Action::Fire => c.fire = true,
+                    }
+                }
+            }
+        }
+
+        c
+    }
+}
 
 pub struct Game {
     ship: ship::Ship,
@@ -35,7 +70,7 @@ impl Game {
         self.score
     }
 
-    pub fn update(&mut self, dt: f32, c: &controls::Controls) -> transition::Transition {
+    pub fn update(&mut self, dt: f32, c: &GameControls) -> transition::Transition {
         if c.pause {
             self.paused = !self.paused;
         }
@@ -52,8 +87,9 @@ impl Game {
             self.bullets.retain(|b| !b.is_expired());
 
             // Shots fired
-            if c.fire {
-                let (pos, dir) = self.ship.muzzle();
+            if c.fire
+                && let Some((pos, dir)) = self.ship.try_fire()
+            {
                 self.bullets.push(bullet::Bullet::new(pos, dir));
             }
 
@@ -138,5 +174,69 @@ impl Game {
             asteroids.push(asteroid::Asteroid::new(asteroid::AsteroidSize::Large, pos));
         }
         asteroids
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Action {
+    RotateLeft,
+    RotateRight,
+    Thrust,
+    Fire,
+}
+
+struct Button {
+    rect: Rect,
+    label: &'static str,
+    action: Action,
+}
+
+fn button_layout() -> [Button; 4] {
+    let (w, h) = (screen_width(), screen_height());
+    let s = 90.0; // button size
+    let m = 28.0; // margin
+    let y = h - s - m;
+    [
+        Button {
+            rect: Rect::new(m, y, s, s),
+            label: "<",
+            action: Action::RotateLeft,
+        },
+        Button {
+            rect: Rect::new(m + s + 16.0, y, s, s),
+            label: ">",
+            action: Action::RotateRight,
+        },
+        Button {
+            rect: Rect::new(w - s - m, y - s - m, s, s),
+            label: "^",
+            action: Action::Thrust,
+        },
+        Button {
+            rect: Rect::new(w - s - m, y, s, s),
+            label: "0",
+            action: Action::Fire,
+        },
+    ]
+}
+
+pub fn draw_touch_buttons(i: &input::Input) {
+    for b in button_layout() {
+        let pressed = i.is_pressed(b.rect);
+        let fill = if pressed {
+            Color::new(1.0, 1.0, 1.0, 0.35)
+        } else {
+            Color::new(1.0, 1.0, 1.0, 0.12)
+        };
+
+        draw_rectangle(b.rect.x, b.rect.y, b.rect.w, b.rect.h, fill);
+        draw_rectangle_lines(b.rect.x, b.rect.y, b.rect.w, b.rect.h, 2.0, WHITE);
+        draw_text(
+            b.label,
+            b.rect.x + b.rect.w / 2.0 - 8.0,
+            b.rect.y + b.rect.h / 2.0 + 8.0,
+            36.0,
+            WHITE,
+        );
     }
 }

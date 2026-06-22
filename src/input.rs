@@ -1,0 +1,70 @@
+use macroquad::prelude::*;
+
+pub struct Input {
+    pub pointers: Vec<Vec2>,
+    pub using_touch: bool,
+    swallow: bool, // ignore held inputs until everything is released
+}
+
+impl Input {
+    pub fn new() -> Self {
+        Self {
+            pointers: Vec::new(),
+            using_touch: false,
+            swallow: false,
+        }
+    }
+    pub fn update(&mut self) {
+        self.pointers = pointers();
+        if !touches().is_empty() {
+            self.using_touch = true;
+        }
+
+        if self.swallow && !is_anything_active() {
+            self.swallow = false
+        }
+    }
+
+    pub fn consume(&mut self) {
+        self.swallow = true;
+    }
+
+    pub fn any_press(&self) -> bool {
+        if self.swallow {
+            return false;
+        }
+        get_last_key_pressed().is_some() || !touches().is_empty()
+    }
+
+    pub fn is_pressed(&self, rect: Rect) -> bool {
+        !self.swallow && self.pointers.iter().any(|p| rect.contains(*p))
+    }
+
+    pub fn is_key_down(&self, key_code: KeyCode) -> bool {
+        !self.swallow && is_key_down(key_code)
+    }
+
+    pub fn debug() -> String {
+        if let Some(touch_0) = touches().first() {
+            let pos = touch_0.position;
+            let mouse_pos = mouse_position();
+            return format!("Input Debug: {}, ({}, {})", pos, mouse_pos.0, mouse_pos.1);
+        }
+        "No touches".to_owned()
+    }
+}
+
+fn is_anything_active() -> bool {
+    !get_keys_down().is_empty() || !touches().is_empty() || is_mouse_button_down(MouseButton::Left)
+}
+
+fn pointers() -> Vec<Vec2> {
+    let scale = miniquad::window::dpi_scale();
+    let mut ps: Vec<Vec2> = touches().iter().map(|t| t.position / scale).collect();
+
+    if is_mouse_button_down(MouseButton::Left) {
+        ps.push(mouse_position().into());
+    }
+
+    ps
+}

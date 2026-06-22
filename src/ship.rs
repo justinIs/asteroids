@@ -5,6 +5,7 @@ use crate::{asteroid::Asteroid, layout, vec_util};
 const ROTATION_SPEED: f32 = std::f32::consts::PI + 1.5;
 const THRUST: f32 = 100.0;
 const MAX_VELOCITY: f32 = 200.0;
+const FIRE_INTERVAL: f32 = 0.2; // 5 shots/sec
 
 pub struct ShipControls {
     pub rotate_left: bool,
@@ -16,6 +17,7 @@ pub struct Ship {
     position: Vec2,
     velocity: Vec2,
     rotation: f32,
+    fire_cooldown: f32,
 }
 
 impl Ship {
@@ -24,6 +26,7 @@ impl Ship {
             position,
             velocity: Vec2::ZERO,
             rotation: 0.0,
+            fire_cooldown: 0.0,
         }
     }
 
@@ -31,7 +34,7 @@ impl Ship {
         (self.position, Self::SHIP_POINTS[0].y.abs())
     }
 
-    pub fn muzzle(&self) -> (Vec2, Vec2) {
+    fn muzzle(&self) -> (Vec2, Vec2) {
         let direction = vec2(self.rotation.sin(), -self.rotation.cos());
         let nos_pos = self.position + direction * Self::SHIP_POINTS[0].y.abs();
 
@@ -40,8 +43,6 @@ impl Ship {
 
     pub fn update(&mut self, dt: f32, ship_controls: &ShipControls) {
         // Handle rotation
-        // let right = is_key_down(KeyCode::Right) || is_key_down(KeyCode::D);
-        // let left = is_key_down(KeyCode::Left) || is_key_down(KeyCode::A);
         if ship_controls.rotate_right && !ship_controls.rotate_left {
             self.rotation += ROTATION_SPEED * dt;
         } else if ship_controls.rotate_left && !ship_controls.rotate_right {
@@ -50,7 +51,6 @@ impl Ship {
         self.rotation = self.rotation.rem_euclid(std::f32::consts::TAU);
 
         // Handle thrust
-        // let up = is_key_down(KeyCode::Up) || is_key_down(KeyCode::W);
         if ship_controls.thrust {
             let direction = vec2(self.rotation.sin(), -self.rotation.cos());
             self.velocity += direction * THRUST * dt;
@@ -68,6 +68,20 @@ impl Ship {
             self.position.y = 0.0;
         } else if self.position.y < 0.0 {
             self.position.y = layout::WORLD_H;
+        }
+
+        // Fire cooldown
+        if self.fire_cooldown > 0.0 {
+            self.fire_cooldown -= dt;
+        }
+    }
+
+    pub fn try_fire(&mut self) -> Option<(Vec2, Vec2)> {
+        if self.fire_cooldown <= 0.0 {
+            self.fire_cooldown = FIRE_INTERVAL;
+            Some(self.muzzle())
+        } else {
+            None
         }
     }
 
