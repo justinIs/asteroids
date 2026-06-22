@@ -5,3 +5,25 @@ edition = "2024"
 
 [dependencies]
 macroquad = "0.4.15"
+
+# Android packaging metadata read by cargo-quad-apk (see android/Dockerfile,
+# build-android.sh). Ignored by every other build target.
+[package.metadata.android]
+label = "Asteroids"
+# Android applicationId. Arbitrary for sideloading; change if you publish.
+package_name = "com.justin.asteroids"
+# Bump this integer for each release you install over a previous one.
+version_code = 1
+# Immersive: hide the status/navigation bars.
+fullscreen = true
+build_targets = [
+    "armv7-linux-androideabi",
+    "aarch64-linux-android",
+    "i686-linux-android",
+    "x86_64-linux-android",
+]
+
+[package.metadata.android.activity_attributes]
+# Required for the launcher activity on Android 12+ (API 31+).
+"android:exported" = "true"
+"android:screenOrientation" = "sensorLandscape"

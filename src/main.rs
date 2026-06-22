@@ -2,7 +2,6 @@ use macroquad::prelude::*;
 
 use crate::{
     game::{Game, GameControls},
-    input::Input,
     screen::Screen,
     transition::Transition,
 };
@@ -153,22 +152,4 @@ fn draw_game_over(score: u32) {
     let y = game_over_y + game_over_dims.height + 8.0;
 
     draw_outlined(&score_text, x, y, 60.0, WHITE, BLACK);
-}
-
-fn draw_debug_info(pointer_len: usize) {
-    let text = format!("Debug: {}", pointer_len);
-    let dims = measure_text(&text, None, 40, 1.0);
-
-    let x = layout::WORLD_W - dims.width;
-    let y = (layout::WORLD_H - dims.height) / 2.0;
-
-    draw_outlined(&text, x, y, 40.0, WHITE, BLACK);
-
-    let text2 = Input::debug();
-    let dims2 = measure_text(&text2, None, 20, 1.0);
-
-    let x = layout::WORLD_W - dims2.width;
-    let y = y + dims2.height + 8.0;
-
-    draw_outlined(&text2, x, y, 20.0, WHITE, BLACK);
 }

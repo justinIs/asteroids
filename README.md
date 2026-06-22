@@ -1,7 +1,8 @@
 # Asteroids
 
 A small Asteroids game written in Rust with [macroquad](https://macroquad.rs/),
-built as a way to learn Rust. Runs natively or in the browser via WebAssembly.
+built as a way to learn Rust. Runs natively, in the browser via WebAssembly, or
+on Android.
 
 ## Run natively
 
@@ -32,6 +33,34 @@ npx serve dist
 ```
 
 Click the canvas once if keyboard input isn't picked up — it needs focus.
+
+## Build for Android (APK)
+
+The APK is built inside a container image (based on macroquad's `cargo-quad-apk`),
+so the Android SDK/NDK live in the image — nothing Android-related is installed on
+your host. Requires `docker` or `podman`.
+
+```sh
+./build-android.sh            # release APK
+./build-android.sh --debug    # debug APK (faster compile)
+```
+
+The first run builds the image (downloads the Android SDK/NDK and compiles the
+toolchain — ~10–20 min, one-time). Subsequent runs reuse it. The APK lands at:
+
+```
+target/android-artifacts/release/apk/asteroids.apk
+```
+
+Install it on a device with USB debugging enabled:
+
+```sh
+adb install -r target/android-artifacts/release/apk/asteroids.apk
+```
+
+App metadata (name, landscape orientation, target ABIs) lives under
+`[package.metadata.android]` in `Cargo.toml`; the build image is defined in
+`android/Dockerfile`.
 
 ## Notes
 

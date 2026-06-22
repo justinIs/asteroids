@@ -43,15 +43,6 @@ impl Input {
     pub fn is_key_down(&self, key_code: KeyCode) -> bool {
         !self.swallow && is_key_down(key_code)
     }
-
-    pub fn debug() -> String {
-        if let Some(touch_0) = touches().first() {
-            let pos = touch_0.position;
-            let mouse_pos = mouse_position();
-            return format!("Input Debug: {}, ({}, {})", pos, mouse_pos.0, mouse_pos.1);
-        }
-        "No touches".to_owned()
-    }
 }
 
 fn is_anything_active() -> bool {

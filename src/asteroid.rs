@@ -47,6 +47,7 @@ pub struct Asteroid {
     position: Vec2,
     rotation: f32,
     verticies: Vec<Vec2>,
+    bounding_radius: f32,
     spin: f32,
     velocity: Vec2,
 }
@@ -56,6 +57,7 @@ impl Asteroid {
         let edges = rand::gen_range(MIN_ASTEROID_EDGES, MAX_ASTERIOD_EDGES + 1);
         let rotation = rand::gen_range(0.0, TAU);
         let verticies = Self::gen_verticies(&size, edges);
+        let bounding_radius = verticies.iter().map(|v| v.length()).fold(0.0_f32, f32::max);
         let spin = rand::gen_range(-PI, PI);
         let direction = Self::gen_direction();
         let velocity = direction * size.initial_speed();
@@ -65,6 +67,7 @@ impl Asteroid {
             position,
             rotation,
             verticies,
+            bounding_radius,
             spin,
             velocity,
         }
@@ -74,6 +77,7 @@ impl Asteroid {
         let edges = rand::gen_range(MIN_ASTEROID_EDGES, MAX_ASTERIOD_EDGES + 1);
         let rotation = rand::gen_range(0.0, TAU);
         let verticies = Self::gen_verticies(&size, edges);
+        let bounding_radius = verticies.iter().map(|v| v.length()).fold(0.0_f32, f32::max);
         let spin = rand::gen_range(-PI, PI);
 
         Asteroid {
@@ -81,6 +85,7 @@ impl Asteroid {
             position,
             rotation,
             verticies,
+            bounding_radius,
             spin,
             velocity,
         }
@@ -106,7 +111,7 @@ impl Asteroid {
     }
 
     pub fn bounds(&self) -> (Vec2, f32) {
-        (self.position, self.size.radius())
+        (self.position, self.bounding_radius)
     }
 
     pub fn velocity(&self) -> Vec2 {
