@@ -264,6 +264,28 @@ impl Asteroid {
         other.set_position(other_pos + separation);
     }
 
+    pub fn contains_point(&self, p: Vec2) -> bool {
+        // get point position relative to asteroid centre
+        let d = vec_util::wrapped_delta(self.position, p);
+
+        if d.length_squared() > self.bounding_radius * self.bounding_radius {
+            return false;
+        }
+
+        // transform point with asteroid's rotation
+        let local = vec_util::rotate(-self.rotation, d);
+
+        vec_util::point_in_polygon(local, &self.verticies)
+    }
+
+    pub fn world_vertices(&self, reference: Vec2) -> Vec<Vec2> {
+        let center = reference + vec_util::wrapped_delta(reference, self.position);
+        self.verticies
+            .iter()
+            .map(|v| center + vec_util::rotate(self.rotation, *v))
+            .collect()
+    }
+
     pub fn split(&self) -> Vec<Asteroid> {
         let Some(size) = self.size.smaller() else {
             return Vec::new();

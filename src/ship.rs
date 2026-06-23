@@ -141,6 +141,15 @@ impl Ship {
     pub fn collides_with(&self, a: &Asteroid) -> bool {
         let (ship_pos, ship_rad) = self.bounds();
         let (a_pos, a_rad) = a.bounds();
-        vec_util::circles_overlap_wrapped(ship_pos, ship_rad, a_pos, a_rad)
+        if !vec_util::circles_overlap_wrapped(ship_pos, ship_rad, a_pos, a_rad) {
+            return false;
+        }
+
+        let ship_world: Vec<Vec2> = Self::SHIP_POINTS
+            .iter()
+            .map(|p| ship_pos + vec_util::rotate(self.rotation, *p))
+            .collect();
+        let ast_world = a.world_vertices(ship_pos);
+        vec_util::polygons_overlap(&ship_world, &ast_world)
     }
 }

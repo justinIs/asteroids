@@ -1,4 +1,4 @@
-use crate::{asteroid, bullet, input, layout, ship, transition, vec_util};
+use crate::{asteroid, bullet, input, layout, ship, transition};
 use macroquad::prelude::*;
 
 const ASTEROID_COUNT: usize = 5;
@@ -116,10 +116,11 @@ impl Game {
             let mut hit_asteroids = vec![false; self.asteroids.len()];
             self.bullets.retain(|b| {
                 match self.asteroids.iter().position(|a| {
-                    let (a_pos, a_rad) = a.bounds();
                     // TODO: handle double it (if the asteroid being checkd here already was hit it
                     // would eat a bullet for no reason)
-                    vec_util::circles_overlap_wrapped(b.position(), 0.0, a_pos, a_rad)
+                    // TODO: consider doing a swept test to handle bullet skipping through smaller
+                    // asteroids or edges
+                    a.contains_point(b.position())
                 }) {
                     Some(i) => {
                         hit_asteroids[i] = true;
