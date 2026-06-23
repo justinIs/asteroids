@@ -17,6 +17,9 @@ mod ship;
 mod transition;
 mod vec_util;
 
+pub const BUILD_TIME: &str = env!("BUILD_TIME");
+pub const BUILD_GIT_HASH: &str = env!("BUILD_GIT_HASH");
+
 fn window_conf() -> Conf {
     Conf {
         window_title: "Asteroids".to_owned(),
@@ -100,14 +103,6 @@ async fn main() {
     }
 }
 
-fn draw_centered_outlined(text: &str, font_size: f32, fill: Color, outline: Color) {
-    let dims = measure_text(text, None, font_size as u16, 1.0);
-    let x = (layout::WORLD_W - dims.width) / 2.0;
-    let y = (layout::WORLD_H - dims.height) / 2.0;
-
-    draw_outlined(text, x, y, font_size, fill, outline);
-}
-
 fn draw_outlined(text: &str, x: f32, y: f32, font_size: f32, fill: Color, outline: Color) {
     let t = 2.0;
     for (dx, dy) in [
@@ -126,7 +121,41 @@ fn draw_outlined(text: &str, x: f32, y: f32, font_size: f32, fill: Color, outlin
 }
 
 fn draw_start() {
-    draw_centered_outlined("PRESS ANY KEY TO START", 40.0, WHITE, BLACK);
+    let font_size = 40.0;
+
+    let text1 = "PRESS ANY KEY TO START";
+    let text1_dims = measure_text(text1, None, font_size as u16, 1.0);
+    let text1_x = (layout::WORLD_W - text1_dims.width) / 2.0;
+    let text1_y = (layout::WORLD_H - text1_dims.height) / 2.0;
+
+    draw_outlined(text1, text1_x, text1_y, font_size, WHITE, BLACK);
+
+    let text2 = format!("Build Date: {}", BUILD_TIME);
+    let dims = measure_text(&text2, None, 20.0 as u16, 1.0);
+    let x = (layout::WORLD_W - dims.width) / 2.0;
+    let y = text1_y + text1_dims.height + 8.0;
+
+    draw_outlined(&text2, x, y, 20.0, WHITE, BLACK);
+
+    let text3 = format!("Git Hash: {}", BUILD_GIT_HASH);
+    let dims = measure_text(&text3, None, 20.0 as u16, 1.0);
+    let x = (layout::WORLD_W - dims.width) / 2.0;
+    let y = y + dims.height + 8.0;
+
+    draw_outlined(&text3, x, y, 20.0, WHITE, BLACK);
+
+    let text = format!(
+        "scale: {:.2}, DPI: {}, screen: {:.0}x{:.0}",
+        layout::ui_scale(),
+        miniquad::window::dpi_scale(),
+        screen_width(),
+        screen_height()
+    );
+    let dims = measure_text(&text, None, 20.0 as u16, 1.0);
+    let x = (layout::WORLD_W - dims.width) / 2.0;
+    let y = y + dims.height + 8.0;
+
+    draw_outlined(&text, x, y, 20.0, WHITE, BLACK);
 }
 
 fn draw_game_over(score: u32) {

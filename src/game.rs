@@ -193,8 +193,9 @@ struct Button {
 
 fn button_layout() -> [Button; 4] {
     let (w, h) = (screen_width(), screen_height());
-    let s = 90.0; // button size
-    let m = 28.0; // margin
+    let s = 90.0 * layout::ui_scale(); // button size
+    let m = 28.0 * layout::ui_scale(); // margin
+    let g = 16.0 * layout::ui_scale(); // gap
     let y = h - s - m;
     [
         Button {
@@ -203,7 +204,7 @@ fn button_layout() -> [Button; 4] {
             action: Action::RotateLeft,
         },
         Button {
-            rect: Rect::new(m + s + 16.0, y, s, s),
+            rect: Rect::new(m + s + g, y, s, s),
             label: ">",
             action: Action::RotateRight,
         },
@@ -230,12 +231,19 @@ pub fn draw_touch_buttons(i: &input::Input) {
         };
 
         draw_rectangle(b.rect.x, b.rect.y, b.rect.w, b.rect.h, fill);
-        draw_rectangle_lines(b.rect.x, b.rect.y, b.rect.w, b.rect.h, 2.0, WHITE);
+        draw_rectangle_lines(
+            b.rect.x,
+            b.rect.y,
+            b.rect.w,
+            b.rect.h,
+            2.0 * layout::ui_scale(),
+            WHITE,
+        );
         draw_text(
             b.label,
             b.rect.x + b.rect.w / 2.0 - 8.0,
             b.rect.y + b.rect.h / 2.0 + 8.0,
-            36.0,
+            36.0 * layout::ui_scale(),
             WHITE,
         );
     }
