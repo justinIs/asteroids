@@ -6,7 +6,7 @@ pub fn ui_scale() -> f32 {
     {
         // Derive multiplier from short screen side, using 600 as the "design" short side - lower to
         // make buttons bigger
-        (macroquad::window::screen_width().min(macroquad::window::screen_height()) / 600.0).max(1.0)
+        (macroquad::window::screen_width().min(macroquad::window::screen_height()) / 400.0).max(1.0)
     }
     #[cfg(not(target_os = "android"))]
     {
