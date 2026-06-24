@@ -33,6 +33,14 @@ impl AsteroidSize {
         }
     }
 
+    fn mass(&self) -> f32 {
+        match self {
+            AsteroidSize::Small => 1.0,
+            AsteroidSize::Medium => 4.0,
+            AsteroidSize::Large => 16.0,
+        }
+    }
+
     fn smaller(&self) -> Option<AsteroidSize> {
         match self {
             AsteroidSize::Large => Some(AsteroidSize::Medium),
@@ -107,7 +115,7 @@ impl Asteroid {
             verticies.push(vertex);
         }
 
-        verticies
+        vec_util::convex_hull(verticies)
     }
 
     pub fn bounds(&self) -> (Vec2, f32) {
@@ -229,23 +237,33 @@ impl Asteroid {
     }
 
     pub fn collide_with(&mut self, other: &mut Asteroid) {
-        let (self_pos, self_rad) = self.bounds();
-        let (other_pos, other_rad) = other.bounds();
+        let self_pos = self.position;
+        let other_pos = other.position;
 
-        let delta = vec_util::wrapped_delta(self_pos, other_pos);
-        let dist = delta.length();
-        let n = if dist < f32::EPSILON {
-            vec2(1.0, 0.0)
-        } else {
-            delta / dist
+        // shared frame, other ghosted next to self for wrap_position
+        let a_world = self.world_vertices(self_pos);
+        let b_world = other.world_vertices(self_pos);
+
+        let Some((mut n, overlap)) = vec_util::sat_overlap(&a_world, &b_world) else {
+            return;
         };
+
+        // orient the normal from self -> other
+        let dir = vec_util::wrapped_delta(self_pos, other_pos);
+        if n.dot(dir) < 0.0 {
+            n = -n;
+        }
 
         let rel = self.velocity() - other.velocity();
 
+        let (inv1, inv2) = (1.0 / self.size().mass(), 1.0 / other.size().mass());
+
         let along = rel.dot(n);
         if along > 0.0 {
-            self.set_velocity(self.velocity() - (along * n));
-            other.set_velocity(other.velocity() + (along * n));
+            let e = 1.0; // restitution; 1.0 = perfectly elastic
+            let j = (1.0 + e) * along / (inv1 + inv2);
+            self.set_velocity(self.velocity() - ((j * inv1) * n));
+            other.set_velocity(other.velocity() + ((j * inv2) * n));
 
             // Update spin for each asteroid
             let tangent = vec2(-n.y, n.x);
@@ -258,10 +276,9 @@ impl Asteroid {
             other.set_spin(other.spin() + spin_delta);
         }
 
-        let overlap = (self_rad + other_rad) - dist;
-        let separation = n * (overlap * 0.5);
-        self.set_position(self_pos - separation);
-        other.set_position(other_pos + separation);
+        // mass-weighted de-penetration
+        self.set_position(self_pos - (n * (overlap * inv1 / (inv1 + inv2))));
+        other.set_position(other_pos + (n * (overlap * inv2 / (inv1 + inv2))));
     }
 
     pub fn contains_point(&self, p: Vec2) -> bool {
