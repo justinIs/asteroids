@@ -1,5 +1,9 @@
-use crate::{asteroid, bullet, input, layout, ship, transition};
+use crate::{input, layout, transition};
 use macroquad::prelude::*;
+
+mod asteroid;
+mod bullet;
+mod ship;
 
 const ASTEROID_COUNT: usize = 5;
 const SCORE_INC: u32 = 10;

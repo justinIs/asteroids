@@ -6,14 +6,11 @@ use crate::{
     transition::Transition,
 };
 
-mod asteroid;
-mod bullet;
 mod camera;
 mod game;
 mod input;
 mod layout;
 mod screen;
-mod ship;
 mod transition;
 mod vec_util;
 

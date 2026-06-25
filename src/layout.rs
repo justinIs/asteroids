@@ -1,5 +1,5 @@
-pub const WORLD_W: f32 = 450.0;
-pub const WORLD_H: f32 = 450.0;
+pub const WORLD_W: f32 = 600.0;
+pub const WORLD_H: f32 = 600.0;
 
 pub fn ui_scale() -> f32 {
     #[cfg(target_os = "android")]

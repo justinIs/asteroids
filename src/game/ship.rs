@@ -1,8 +1,10 @@
 use macroquad::prelude::*;
 
-use crate::{asteroid::Asteroid, layout, vec_util};
+use super::asteroid;
+use crate::{layout, vec_util};
 
-const ROTATION_SPEED: f32 = std::f32::consts::PI + 1.5;
+const MAX_ROTATION_SPEED: f32 = std::f32::consts::PI + 1.5;
+const ANG_ACCEL: f32 = 40.0;
 const THRUST: f32 = 100.0;
 const MAX_VELOCITY: f32 = 200.0;
 const FIRE_INTERVAL: f32 = 0.2; // 5 shots/sec
@@ -17,6 +19,7 @@ pub struct Ship {
     position: Vec2,
     velocity: Vec2,
     rotation: f32,
+    turn_rate: f32,
     fire_cooldown: f32,
 }
 
@@ -26,6 +29,7 @@ impl Ship {
             position,
             velocity: Vec2::ZERO,
             rotation: 0.0,
+            turn_rate: 0.0,
             fire_cooldown: 0.0,
         }
     }
@@ -44,9 +48,13 @@ impl Ship {
     pub fn update(&mut self, dt: f32, ship_controls: &ShipControls) {
         // Handle rotation
         if ship_controls.rotate_right && !ship_controls.rotate_left {
-            self.rotation += ROTATION_SPEED * dt;
+            self.turn_rate = (self.turn_rate + ANG_ACCEL * dt).min(MAX_ROTATION_SPEED);
+            self.rotation += self.turn_rate * dt;
         } else if ship_controls.rotate_left && !ship_controls.rotate_right {
-            self.rotation -= ROTATION_SPEED * dt;
+            self.turn_rate = (self.turn_rate + ANG_ACCEL * dt).min(MAX_ROTATION_SPEED);
+            self.rotation -= self.turn_rate * dt;
+        } else {
+            self.turn_rate = 0.0;
         }
         self.rotation = self.rotation.rem_euclid(std::f32::consts::TAU);
 
@@ -138,7 +146,7 @@ impl Ship {
         }
     }
 
-    pub fn collides_with(&self, a: &Asteroid) -> bool {
+    pub fn collides_with(&self, a: &asteroid::Asteroid) -> bool {
         let (ship_pos, ship_rad) = self.bounds();
         let (a_pos, a_rad) = a.bounds();
         if !vec_util::circles_overlap_wrapped(ship_pos, ship_rad, a_pos, a_rad) {
