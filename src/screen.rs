@@ -1,7 +1,8 @@
-use crate::game;
+use crate::{game, start_screen};
 
 pub enum Screen {
-    Start,
+    Start(start_screen::StartScreen),
     Playing(game::Game),
-    GameOver(game::Game),
+    GameOver(game::Game, bool),
+    Empty,
 }

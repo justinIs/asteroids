@@ -1,6 +1,6 @@
 pub enum Transition {
     None,
     NewGame,
-    GameOver,
+    GameOver(bool),
     ToStart,
 }

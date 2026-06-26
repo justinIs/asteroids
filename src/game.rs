@@ -1,4 +1,4 @@
-use crate::{input, layout, transition};
+use crate::{input, layout, text, transition};
 use macroquad::prelude::*;
 
 mod asteroid;
@@ -49,6 +49,7 @@ pub struct Game {
     bullets: Vec<bullet::Bullet>,
     score: u32,
     paused: bool,
+    cleared: bool,
 }
 
 impl Game {
@@ -60,6 +61,7 @@ impl Game {
         let bullets: Vec<bullet::Bullet> = Vec::new();
         let score: u32 = 0;
         let paused = false;
+        let cleared = false;
 
         Self {
             ship,
@@ -67,6 +69,7 @@ impl Game {
             bullets,
             score,
             paused,
+            cleared,
         }
     }
 
@@ -78,7 +81,10 @@ impl Game {
         if c.pause {
             self.paused = !self.paused;
         }
-        if !self.paused {
+        if self.cleared && (c.fire || c.pause) {
+            return transition::Transition::GameOver(true);
+        }
+        if !self.paused && !self.cleared {
             // Position update
             self.ship.update(dt, &c.ship_controls);
 
@@ -102,7 +108,7 @@ impl Game {
             // Asteroid <-> spaceship
             let crashed = self.asteroids.iter().any(|a| self.ship.collides_with(a));
             if crashed {
-                return transition::Transition::GameOver;
+                return transition::Transition::GameOver(false);
             }
 
             // Asteroid <-> asteroid
@@ -117,6 +123,8 @@ impl Game {
             }
 
             // Asteroid <-> bullet
+
+            // First detect hit asteroids
             let mut hit_asteroids = vec![false; self.asteroids.len()];
             self.bullets.retain(|b| {
                 match self.asteroids.iter().position(|a| {
@@ -135,6 +143,7 @@ impl Game {
                 }
             });
 
+            // Then rebuild self.asteroids by splitting hit asteroids and pushing the others
             for (i, a) in std::mem::take(&mut self.asteroids).into_iter().enumerate() {
                 if hit_asteroids[i] {
                     self.asteroids.extend(a.split());
@@ -142,6 +151,8 @@ impl Game {
                     self.asteroids.push(a);
                 }
             }
+
+            self.cleared = self.asteroids.is_empty();
         }
         transition::Transition::None
     }
@@ -156,6 +167,10 @@ impl Game {
         }
 
         self.draw_score();
+
+        if self.cleared {
+            self.draw_cleared();
+        }
     }
 
     fn draw_score(&self) {
@@ -166,6 +181,16 @@ impl Game {
         let x = layout::WORLD_W - dims.width - margin;
         let y = margin + dims.height;
         draw_text(&text, x, y, size, WHITE);
+    }
+
+    fn draw_cleared(&self) {
+        let text = "Cleared!";
+        let size = 80.0;
+        let dims = measure_text(text, None, size as u16, 1.0);
+        let x = (layout::WORLD_W - dims.width) / 2.0;
+        let y = (layout::WORLD_H - dims.height) / 2.0;
+
+        text::draw_outlined(text, x, y, size, WHITE, BLACK);
     }
 
     fn create_asteroids(avoid_pos: Vec2, num_asteroids: usize) -> Vec<asteroid::Asteroid> {
