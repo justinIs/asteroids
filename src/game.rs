@@ -5,7 +5,6 @@ mod asteroid;
 mod bullet;
 mod ship;
 
-const ASTEROID_COUNT: usize = 5;
 const SCORE_INC: u32 = 10;
 
 pub struct GameControls {
@@ -45,6 +44,9 @@ impl GameControls {
 
 pub struct Game {
     ship: ship::Ship,
+    level: usize,
+    level_time: f32,   // seconds elapsed in the current level
+    next_event: usize, // next event to fire/how many events have already fired
     asteroids: Vec<asteroid::Asteroid>,
     bullets: Vec<bullet::Bullet>,
     score: u32,
@@ -57,7 +59,7 @@ impl Game {
         let ship_pos = vec2(layout::WORLD_W / 2.0, layout::WORLD_H / 2.0);
         let ship = ship::Ship::new(ship_pos);
 
-        let asteroids = Self::create_asteroids(ship_pos, ASTEROID_COUNT);
+        let asteroids = Self::create_asteroids(ship_pos, LEVELS[0].initial_asteroids);
         let bullets: Vec<bullet::Bullet> = Vec::new();
         let score: u32 = 0;
         let paused = false;
@@ -65,6 +67,9 @@ impl Game {
 
         Self {
             ship,
+            level: 0,
+            level_time: 0.0,
+            next_event: 0,
             asteroids,
             bullets,
             score,
@@ -77,14 +82,48 @@ impl Game {
         self.score
     }
 
-    pub fn update(&mut self, dt: f32, c: &GameControls) -> transition::Transition {
+    pub fn update(&mut self, dt: f32, input: &mut input::Input) -> transition::Transition {
+        let c = GameControls::from_input(input);
         if c.pause {
             self.paused = !self.paused;
         }
-        if self.cleared && (c.fire || c.pause) {
-            return transition::Transition::GameOver(true);
+        if self.cleared && (c.fire || c.pause || (input.using_touch && input.any_press())) {
+            match LEVELS.get(self.level + 1) {
+                Some(spec) => {
+                    self.level += 1;
+                    self.asteroids =
+                        Self::create_asteroids(self.ship.bounds().0, spec.initial_asteroids);
+                    self.level_time = 0.0;
+                    self.next_event = 0;
+
+                    self.bullets.clear();
+                    self.ship
+                        .reset(vec2(layout::WORLD_W / 2.0, layout::WORLD_H / 2.0));
+                }
+                None => return transition::Transition::GameOver(true),
+            }
+            self.cleared = false;
         }
         if !self.paused && !self.cleared {
+            self.level_time += dt;
+            let Some(spec) = LEVELS.get(self.level) else {
+                // should never happen but return game over in case
+                return transition::Transition::GameOver(true);
+            };
+
+            // Spawns
+            if let Some(event) = spec.events.get(self.next_event)
+                && event.at >= self.level_time
+            {
+                match event.spawn {
+                    Spawn::Asteroids(num) => self
+                        .asteroids
+                        .extend(Self::create_asteroids(self.ship.bounds().0, num)),
+                    Spawn::Alien => (),
+                }
+                self.next_event += 1;
+            }
+
             // Position update
             self.ship.update(dt, &c.ship_controls);
 
@@ -153,6 +192,9 @@ impl Game {
             }
 
             self.cleared = self.asteroids.is_empty();
+            if self.cleared {
+                input.consume();
+            }
         }
         transition::Transition::None
     }
@@ -166,11 +208,22 @@ impl Game {
             b.draw();
         }
 
+        self.draw_level();
         self.draw_score();
 
         if self.cleared {
             self.draw_cleared();
         }
+    }
+
+    fn draw_level(&self) {
+        let text = format!("Level: {}", self.level + 1);
+        let size = 30.0;
+        let dims = measure_text(&text, None, size as u16, 1.0);
+        let margin = 12.0;
+        let x = margin;
+        let y = margin + dims.height;
+        draw_text(&text, x, y, size, WHITE);
     }
 
     fn draw_score(&self) {
@@ -206,6 +259,51 @@ impl Game {
         asteroids
     }
 }
+
+enum Spawn {
+    Asteroids(usize),
+    Alien,
+}
+
+struct SpawnEvent {
+    at: f32, // seconds since level started
+    spawn: Spawn,
+}
+
+struct LevelSpec {
+    initial_asteroids: usize,
+    events: &'static [SpawnEvent],
+}
+
+const LEVELS: &[LevelSpec] = &[
+    // Level 1
+    LevelSpec {
+        initial_asteroids: 3,
+        events: &[],
+    },
+    // Level 2
+    LevelSpec {
+        initial_asteroids: 5,
+        events: &[SpawnEvent {
+            at: 0.0,
+            spawn: Spawn::Alien,
+        }],
+    },
+    // Level 3
+    LevelSpec {
+        initial_asteroids: 5,
+        events: &[
+            SpawnEvent {
+                at: 0.0,
+                spawn: Spawn::Alien,
+            },
+            SpawnEvent {
+                at: 15.0,
+                spawn: Spawn::Asteroids(2),
+            },
+        ],
+    },
+];
 
 #[derive(Clone, Copy)]
 enum Action {

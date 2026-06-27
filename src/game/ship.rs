@@ -38,6 +38,14 @@ impl Ship {
         (self.position, Self::SHIP_POINTS[0].y.abs())
     }
 
+    pub fn reset(&mut self, position: Vec2) {
+        self.position = position;
+        self.velocity = Vec2::ZERO;
+        self.rotation = 0.0;
+        self.turn_rate = 0.0;
+        self.fire_cooldown = 0.0;
+    }
+
     fn muzzle(&self) -> (Vec2, Vec2) {
         let direction = vec2(self.rotation.sin(), -self.rotation.cos());
         let nos_pos = self.position + direction * Self::SHIP_POINTS[0].y.abs();

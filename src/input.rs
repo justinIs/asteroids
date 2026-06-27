@@ -40,6 +40,14 @@ impl Input {
         !self.swallow && self.pointers.iter().any(|p| rect.contains(*p))
     }
 
+    pub fn is_pressed_world(&self, rect: Rect) -> bool {
+        !self.swallow
+            && self
+                .pointers
+                .iter()
+                .any(|p| rect.contains(crate::camera::screen_to_world(*p)))
+    }
+
     pub fn is_key_down(&self, key_code: KeyCode) -> bool {
         !self.swallow && is_key_down(key_code)
     }

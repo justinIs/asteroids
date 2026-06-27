@@ -19,3 +19,11 @@ pub fn world_camera() -> Camera2D {
 
     cam
 }
+
+pub fn screen_to_world(p: Vec2) -> Vec2 {
+    let scale = (screen_width() / layout::WORLD_W).min(screen_height() / layout::WORLD_H);
+    let vw = layout::WORLD_W * scale;
+    let vh = layout::WORLD_H * scale;
+    let offset = vec2((screen_width() - vw) / 2.0, (screen_height() - vh) / 2.0);
+    (p - offset) / scale
+}

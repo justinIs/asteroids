@@ -1,10 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::{
-    game::{Game, GameControls},
-    screen::Screen,
-    transition::Transition,
-};
+use crate::{game::Game, screen::Screen, transition::Transition};
 
 mod build_info;
 mod camera;
@@ -46,10 +42,8 @@ async fn main() {
         let dt = get_frame_time();
 
         let transition = match &mut screen {
-            Screen::Start(start_screen) => {
-                start_screen.update(&start_screen::StartScreenControls::from_input(&i), dt)
-            }
-            Screen::Playing(game) => game.update(dt, &GameControls::from_input(&i)),
+            Screen::Start(start_screen) => start_screen.update(&mut i, dt),
+            Screen::Playing(game) => game.update(dt, &mut i),
             Screen::GameOver(_, _) => {
                 if i.any_press() {
                     Transition::ToStart
