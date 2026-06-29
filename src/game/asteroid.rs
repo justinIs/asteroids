@@ -295,6 +295,28 @@ impl Asteroid {
         vec_util::point_in_polygon(local, &self.verticies)
     }
 
+    pub fn intersects_segment(&self, end: Vec2, step: Vec2) -> bool {
+        let e_world = vec_util::wrapped_delta(self.position, end); // end, relative to center
+        let s_world = e_world - step;
+        let s = vec_util::rotate(-self.rotation, s_world);
+        let e = vec_util::rotate(-self.rotation, e_world);
+
+        if vec_util::point_in_polygon(s, &self.verticies)
+            || vec_util::point_in_polygon(e, &self.verticies)
+        {
+            return true;
+        }
+
+        let n = self.verticies.len();
+        for i in 0..n {
+            if vec_util::segments_cross(s, e, self.verticies[i], self.verticies[(i + 1) % n]) {
+                return true;
+            }
+        }
+
+        false
+    }
+
     pub fn world_vertices(&self, reference: Vec2) -> Vec<Vec2> {
         let center = reference + vec_util::wrapped_delta(reference, self.position);
         self.verticies

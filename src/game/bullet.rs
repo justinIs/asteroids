@@ -9,15 +9,17 @@ pub struct Bullet {
     position: Vec2,
     velocity: Vec2,
     distance_traveled: f32,
+    last_step: Vec2,
 }
 
 impl Bullet {
-    pub fn new(position: Vec2, direction: Vec2) -> Bullet {
-        let velocity = direction * BULLET_SPEED;
+    pub fn new(position: Vec2, direction: Vec2, inherited: Vec2) -> Bullet {
+        let velocity = inherited + direction * BULLET_SPEED;
         Bullet {
             position,
             velocity,
             distance_traveled: 0.0,
+            last_step: Vec2::ZERO,
         }
     }
 
@@ -31,6 +33,10 @@ impl Bullet {
 
     pub fn is_expired(&self) -> bool {
         self.distance_traveled >= Self::max_bullet_distance()
+    }
+
+    pub fn last_step(&self) -> Vec2 {
+        self.last_step
     }
 
     pub fn draw(&self) {
@@ -48,6 +54,7 @@ impl Bullet {
         self.position += step;
         self.position.x = self.position.x.rem_euclid(layout::WORLD_W);
         self.position.y = self.position.y.rem_euclid(layout::WORLD_H);
-        self.distance_traveled += step.abs().length()
+        self.distance_traveled += step.abs().length();
+        self.last_step = step;
     }
 }

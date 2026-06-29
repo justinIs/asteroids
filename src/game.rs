@@ -91,14 +91,14 @@ impl Game {
             match LEVELS.get(self.level + 1) {
                 Some(spec) => {
                     self.level += 1;
+                    self.ship
+                        .reset(vec2(layout::WORLD_W / 2.0, layout::WORLD_H / 2.0));
                     self.asteroids =
                         Self::create_asteroids(self.ship.bounds().0, spec.initial_asteroids);
                     self.level_time = 0.0;
                     self.next_event = 0;
 
                     self.bullets.clear();
-                    self.ship
-                        .reset(vec2(layout::WORLD_W / 2.0, layout::WORLD_H / 2.0));
                 }
                 None => return transition::Transition::GameOver(true),
             }
@@ -111,9 +111,9 @@ impl Game {
                 return transition::Transition::GameOver(true);
             };
 
-            // Spawns
+            // Events
             if let Some(event) = spec.events.get(self.next_event)
-                && event.at >= self.level_time
+                && event.at <= self.level_time
             {
                 match event.spawn {
                     Spawn::Asteroids(num) => self
@@ -137,9 +137,9 @@ impl Game {
 
             // Shots fired
             if c.fire
-                && let Some((pos, dir)) = self.ship.try_fire()
+                && let Some((pos, dir, velocity)) = self.ship.try_fire()
             {
-                self.bullets.push(bullet::Bullet::new(pos, dir));
+                self.bullets.push(bullet::Bullet::new(pos, dir, velocity));
             }
 
             // Collision detection
@@ -166,13 +166,15 @@ impl Game {
             // First detect hit asteroids
             let mut hit_asteroids = vec![false; self.asteroids.len()];
             self.bullets.retain(|b| {
-                match self.asteroids.iter().position(|a| {
-                    // TODO: handle double it (if the asteroid being checkd here already was hit it
-                    // would eat a bullet for no reason)
-                    // TODO: consider doing a swept test to handle bullet skipping through smaller
-                    // asteroids or edges
-                    a.contains_point(b.position())
-                }) {
+                match self
+                    .asteroids
+                    .iter()
+                    .enumerate()
+                    .find(|(i, a)| {
+                        !hit_asteroids[*i] && a.intersects_segment(b.position(), b.last_step())
+                    })
+                    .map(|(i, _)| i)
+                {
                     Some(i) => {
                         hit_asteroids[i] = true;
                         self.score += SCORE_INC;
@@ -191,7 +193,7 @@ impl Game {
                 }
             }
 
-            self.cleared = self.asteroids.is_empty();
+            self.cleared = self.asteroids.is_empty() && spec.events.get(self.next_event).is_none();
             if self.cleared {
                 input.consume();
             }
@@ -278,8 +280,17 @@ struct LevelSpec {
 const LEVELS: &[LevelSpec] = &[
     // Level 1
     LevelSpec {
-        initial_asteroids: 3,
-        events: &[],
+        initial_asteroids: 1,
+        events: &[
+            SpawnEvent {
+                at: 15.0,
+                spawn: Spawn::Asteroids(1),
+            },
+            SpawnEvent {
+                at: 30.0,
+                spawn: Spawn::Asteroids(1),
+            },
+        ],
     },
     // Level 2
     LevelSpec {

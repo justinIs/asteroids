@@ -46,11 +46,11 @@ impl Ship {
         self.fire_cooldown = 0.0;
     }
 
-    fn muzzle(&self) -> (Vec2, Vec2) {
+    fn muzzle(&self) -> (Vec2, Vec2, Vec2) {
         let direction = vec2(self.rotation.sin(), -self.rotation.cos());
         let nos_pos = self.position + direction * Self::SHIP_POINTS[0].y.abs();
 
-        (nos_pos, direction)
+        (nos_pos, direction, self.velocity)
     }
 
     pub fn update(&mut self, dt: f32, ship_controls: &ShipControls) {
@@ -92,7 +92,7 @@ impl Ship {
         }
     }
 
-    pub fn try_fire(&mut self) -> Option<(Vec2, Vec2)> {
+    pub fn try_fire(&mut self) -> Option<(Vec2, Vec2, Vec2)> {
         if self.fire_cooldown <= 0.0 {
             self.fire_cooldown = FIRE_INTERVAL;
             Some(self.muzzle())

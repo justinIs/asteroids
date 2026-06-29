@@ -44,7 +44,7 @@ pub fn polygons_overlap(a: &[Vec2], b: &[Vec2]) -> bool {
     point_in_polygon(a[0], b) || point_in_polygon(b[0], a)
 }
 
-fn segments_cross(a: Vec2, b: Vec2, c: Vec2, d: Vec2) -> bool {
+pub fn segments_cross(a: Vec2, b: Vec2, c: Vec2, d: Vec2) -> bool {
     let d1 = (b - a).perp_dot(c - a);
     let d2 = (b - a).perp_dot(d - a);
     let d3 = (d - c).perp_dot(a - c);
