@@ -62,7 +62,8 @@ async fn main() {
             Screen::Start(start_screen) => start_screen.draw(),
             Screen::Playing(game) => {
                 game.draw();
-                // draw_debug_info(i.pointers.len());
+                set_default_camera();
+                game.draw_touch_buttons(&i);
             }
             Screen::GameOver(game, win) => {
                 game.draw();
@@ -75,9 +76,9 @@ async fn main() {
         }
 
         set_default_camera();
-        if i.using_touch && matches!(screen, Screen::Playing(_)) {
-            game::draw_touch_buttons(&i);
-        }
+        // if i.using_touch && matches!(screen, Screen::Playing(_)) {
+        //     game::draw_touch_buttons(&i);
+        // }
 
         match transition {
             Transition::None => {}

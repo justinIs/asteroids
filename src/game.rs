@@ -7,39 +7,15 @@ mod ship;
 
 const SCORE_INC: u32 = 10;
 
+#[derive(Default)]
 pub struct GameControls {
-    pub ship_controls: ship::ShipControls,
-    pub fire: bool,
-    pub pause: bool,
-}
+    using_touch: bool,
+    ship_controls: ship::ShipControls,
+    fire: bool,
+    pause: bool,
+    advance: bool,
 
-impl GameControls {
-    pub fn from_input(i: &input::Input) -> Self {
-        let mut c = Self {
-            ship_controls: ship::ShipControls {
-                rotate_left: i.is_key_down(KeyCode::Left) || i.is_key_down(KeyCode::A),
-                rotate_right: i.is_key_down(KeyCode::Right) || i.is_key_down(KeyCode::D),
-                thrust: i.is_key_down(KeyCode::Up) || i.is_key_down(KeyCode::W),
-            },
-            pause: is_key_pressed(KeyCode::Enter),
-            fire: i.is_key_down(KeyCode::Space),
-        };
-
-        if i.using_touch {
-            for b in button_layout() {
-                if i.is_pressed(b.rect) {
-                    match b.action {
-                        Action::RotateLeft => c.ship_controls.rotate_left = true,
-                        Action::RotateRight => c.ship_controls.rotate_right = true,
-                        Action::Thrust => c.ship_controls.thrust = true,
-                        Action::Fire => c.fire = true,
-                    }
-                }
-            }
-        }
-
-        c
-    }
+    touch_buttons: Option<[Button; 5]>,
 }
 
 pub struct Game {
@@ -52,6 +28,7 @@ pub struct Game {
     score: u32,
     paused: bool,
     cleared: bool,
+    controls: GameControls,
 }
 
 impl Game {
@@ -64,6 +41,7 @@ impl Game {
         let score: u32 = 0;
         let paused = false;
         let cleared = false;
+        let controls = GameControls::default();
 
         Self {
             ship,
@@ -75,6 +53,7 @@ impl Game {
             score,
             paused,
             cleared,
+            controls,
         }
     }
 
@@ -83,11 +62,10 @@ impl Game {
     }
 
     pub fn update(&mut self, dt: f32, input: &mut input::Input) -> transition::Transition {
-        let c = GameControls::from_input(input);
-        if c.pause {
-            self.paused = !self.paused;
-        }
-        if self.cleared && (c.fire || c.pause || (input.using_touch && input.any_press())) {
+        self.update_controls(input);
+        let c = &self.controls;
+
+        if self.cleared && (c.pause || c.advance) {
             match LEVELS.get(self.level + 1) {
                 Some(spec) => {
                     self.level += 1;
@@ -103,6 +81,8 @@ impl Game {
                 None => return transition::Transition::GameOver(true),
             }
             self.cleared = false;
+        } else if c.pause {
+            self.paused = !self.paused;
         }
         if !self.paused && !self.cleared {
             self.level_time += dt;
@@ -201,6 +181,36 @@ impl Game {
         transition::Transition::None
     }
 
+    fn update_controls(&mut self, i: &input::Input) {
+        self.controls.using_touch = i.using_touch;
+        self.controls.ship_controls.rotate_left =
+            i.is_key_down(KeyCode::Left) || i.is_key_down(KeyCode::A);
+        self.controls.ship_controls.rotate_right =
+            i.is_key_down(KeyCode::Right) || i.is_key_down(KeyCode::D);
+        self.controls.ship_controls.thrust =
+            i.is_key_down(KeyCode::Up) || i.is_key_down(KeyCode::W);
+        self.controls.pause = is_key_pressed(KeyCode::Enter);
+        self.controls.fire = i.is_key_down(KeyCode::Space);
+        self.controls.advance = false;
+
+        if i.using_touch {
+            if self.controls.touch_buttons.is_none() {
+                self.controls.touch_buttons = Some(button_layout());
+            }
+            for b in self.controls.touch_buttons.as_ref().unwrap() {
+                if i.is_pressed(b.rect) {
+                    match b.action {
+                        Action::RotateLeft => self.controls.ship_controls.rotate_left = true,
+                        Action::RotateRight => self.controls.ship_controls.rotate_right = true,
+                        Action::Thrust => self.controls.ship_controls.thrust = true,
+                        Action::Fire => self.controls.fire = true,
+                        Action::Advance => self.controls.advance = true,
+                    }
+                }
+            }
+        }
+    }
+
     pub fn draw(&self) {
         self.ship.draw();
         for a in &self.asteroids {
@@ -214,7 +224,9 @@ impl Game {
         self.draw_score();
 
         if self.cleared {
-            self.draw_cleared();
+            self.draw_centered("Cleared!");
+        } else if self.paused {
+            self.draw_centered("Paused");
         }
     }
 
@@ -238,8 +250,39 @@ impl Game {
         draw_text(&text, x, y, size, WHITE);
     }
 
-    fn draw_cleared(&self) {
-        let text = "Cleared!";
+    pub fn draw_touch_buttons(&self, i: &input::Input) {
+        if let Some(buttons) = self.controls.touch_buttons.as_ref() {
+            for b in buttons {
+                if b.action == Action::Advance && !self.cleared {
+                    continue;
+                }
+                let pressed = i.is_pressed(b.rect);
+                let fill = if pressed {
+                    Color::new(1.0, 1.0, 1.0, 0.35)
+                } else {
+                    Color::new(1.0, 1.0, 1.0, 0.12)
+                };
+
+                draw_rectangle(b.rect.x, b.rect.y, b.rect.w, b.rect.h, fill);
+                draw_rectangle_lines(
+                    b.rect.x,
+                    b.rect.y,
+                    b.rect.w,
+                    b.rect.h,
+                    2.0 * layout::ui_scale(),
+                    WHITE,
+                );
+                draw_text(
+                    b.label,
+                    b.rect.x + b.rect.w / 2.0 - 8.0,
+                    b.rect.y + b.rect.h / 2.0 + 8.0,
+                    36.0 * layout::ui_scale(),
+                    WHITE,
+                );
+            }
+        }
+    }
+    fn draw_centered(&self, text: &str) {
         let size = 80.0;
         let dims = measure_text(text, None, size as u16, 1.0);
         let x = (layout::WORLD_W - dims.width) / 2.0;
@@ -316,12 +359,13 @@ const LEVELS: &[LevelSpec] = &[
     },
 ];
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 enum Action {
     RotateLeft,
     RotateRight,
     Thrust,
     Fire,
+    Advance,
 }
 
 struct Button {
@@ -330,12 +374,18 @@ struct Button {
     action: Action,
 }
 
-fn button_layout() -> [Button; 4] {
+fn button_layout() -> [Button; 5] {
     let (w, h) = (screen_width(), screen_height());
     let s = 90.0 * layout::ui_scale(); // button size
     let m = 28.0 * layout::ui_scale(); // margin
     let g = 16.0 * layout::ui_scale(); // gap
     let y = h - s - m;
+
+    let advance = "advance";
+    let advance_font_size = 36.0 * layout::ui_scale();
+    let advance_dims = measure_text(advance, None, advance_font_size as u16, 1.0);
+    let advance_x = (w - advance_dims.width) / 2.0 + 10.0;
+
     [
         Button {
             rect: Rect::new(m, y, s, s),
@@ -357,33 +407,15 @@ fn button_layout() -> [Button; 4] {
             label: "0",
             action: Action::Fire,
         },
+        Button {
+            rect: Rect::new(
+                advance_x,
+                y,
+                20.0 + advance_dims.width,
+                10.0 + advance_dims.height,
+            ),
+            label: advance,
+            action: Action::Advance,
+        },
     ]
-}
-
-pub fn draw_touch_buttons(i: &input::Input) {
-    for b in button_layout() {
-        let pressed = i.is_pressed(b.rect);
-        let fill = if pressed {
-            Color::new(1.0, 1.0, 1.0, 0.35)
-        } else {
-            Color::new(1.0, 1.0, 1.0, 0.12)
-        };
-
-        draw_rectangle(b.rect.x, b.rect.y, b.rect.w, b.rect.h, fill);
-        draw_rectangle_lines(
-            b.rect.x,
-            b.rect.y,
-            b.rect.w,
-            b.rect.h,
-            2.0 * layout::ui_scale(),
-            WHITE,
-        );
-        draw_text(
-            b.label,
-            b.rect.x + b.rect.w / 2.0 - 8.0,
-            b.rect.y + b.rect.h / 2.0 + 8.0,
-            36.0 * layout::ui_scale(),
-            WHITE,
-        );
-    }
 }

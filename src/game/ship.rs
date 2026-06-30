@@ -9,6 +9,7 @@ const THRUST: f32 = 100.0;
 const MAX_VELOCITY: f32 = 200.0;
 const FIRE_INTERVAL: f32 = 0.2; // 5 shots/sec
 
+#[derive(Default)]
 pub struct ShipControls {
     pub rotate_left: bool,
     pub rotate_right: bool,
